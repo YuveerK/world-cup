@@ -1,4 +1,16 @@
+// Compatibility entry point — all logic now lives in src/.
+// This file exists only so that existing process managers pointing at
+// index.js keep working without changes.
 require('dotenv').config();
+require('./src/server');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Everything below this line is the old monolithic implementation.
+// It is no longer imported or executed; kept here for reference until
+// the next cleanup commit removes it entirely.
+// ─────────────────────────────────────────────────────────────────────────────
+/* OLD CODE BELOW — NOT EXECUTED
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -407,3 +419,5 @@ app.listen(PORT, () => {
   console.log('  GET  /leaderboard               ranked leaderboard');
   console.log('  POST /scoring/trigger           manually trigger scoring');
 });
+
+END OLD CODE */
