@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.development
+.env.production
+
+# Runtime data / local state
+.admin-users.json
+*.log
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
