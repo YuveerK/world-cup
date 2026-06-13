@@ -4,12 +4,18 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "test": "jest --testPathPattern=tests/ --forceExit",
+    "test:unit": "jest --testPathPattern=tests/unit/ --forceExit",
+    "test:integration": "jest --testPathPattern=tests/integration/ --forceExit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
     "axios": "^1.7.2",
