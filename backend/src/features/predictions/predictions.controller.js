@@ -27,7 +27,7 @@ const getMyPoints = asyncHandler(async (req, res) => {
 });
 
 const getMatchPredictions = asyncHandler(async (req, res) => {
-  const predictions = await svc.getPredictionsForMatchPostKickoff(req.params.matchId);
+  const predictions = await svc.getPredictionsForMatch(req.params.matchId);
   res.json({ predictions });
 });
 

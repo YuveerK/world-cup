@@ -42,13 +42,8 @@ async function getMyPoints(userId) {
   return repo.findPointsByUser(userId);
 }
 
-async function getPredictionsForMatchPostKickoff(matchId) {
-  const kickoff = await getMatchKickoff(matchId);
-  if (kickoff && Date.now() < kickoff.getTime()) {
-    const { ForbiddenError } = require('../../shared/http/errors');
-    throw new ForbiddenError('Predictions are hidden until kickoff');
-  }
+async function getPredictionsForMatch(matchId) {
   return repo.findByMatch(matchId);
 }
 
-module.exports = { savePrediction, getMyPredictions, getMyPoints, getPredictionsForMatchPostKickoff };
+module.exports = { savePrediction, getMyPredictions, getMyPoints, getPredictionsForMatch };

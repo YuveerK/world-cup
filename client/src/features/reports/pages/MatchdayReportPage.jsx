@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Award, BarChart2, Check, ChevronDown, Copy, Crown, FileDown, Medal, Printer, RefreshCw, Star, Target, TrendingDown, TrendingUp, Trophy, Users, X, Zap } from 'lucide-react';
+import { AlertCircle, Award, BarChart2, Check, ChevronDown, Copy, Crown, Eye, FileDown, Lock, Loader2, Medal, Printer, RefreshCw, Star, Target, TrendingDown, TrendingUp, Trophy, Users, X, Zap } from 'lucide-react';
+import { apiRequest } from '@/lib/api/apiClient';
 import {
   Bar, BarChart, CartesianGrid, Cell,
   Line, LineChart,
@@ -294,11 +295,15 @@ function RankBadge({ rank }) {
 }
 
 
-function MatchResultCard({ match }) {
+function MatchResultCard({ match, onClick }) {
   const status = displayStatus(match);
   const live = status === 'LIVE';
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm text-left transition hover:border-blue-200 hover:shadow-md"
+    >
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {/* Home */}
         <div className="flex flex-col items-center gap-1.5">
@@ -341,6 +346,70 @@ function MatchResultCard({ match }) {
             {teamName(match.away)}
           </p>
         </div>
+      </div>
+
+      {/* Footer hint */}
+      <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-slate-100 pt-2.5 text-[11px] font-semibold text-blue-500 transition group-hover:text-blue-700">
+        <Eye className="h-3.5 w-3.5" aria-hidden="true" /> View all predictions
+      </div>
+    </button>
+  );
+}
+
+function PredictionsTable({ rows, currentUser }) {
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const totalA = (a.ht_pts || 0) + (a.ft_pts || 0) + (a.closest_pts || 0) + (a.outcome_pts || 0);
+      const totalB = (b.ht_pts || 0) + (b.ft_pts || 0) + (b.closest_pts || 0) + (b.outcome_pts || 0);
+      return totalB - totalA;
+    });
+  }, [rows]);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <th className="px-3 py-2.5">#</th>
+              <th className="px-3 py-2.5">Player</th>
+              <th className="px-3 py-2.5 text-center">HT pred</th>
+              <th className="px-3 py-2.5 text-center">FT pred</th>
+              <th className="px-3 py-2.5 text-right">Pts</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {sorted.map((row, i) => {
+              const total = roundPoints((row.ht_pts || 0) + (row.ft_pts || 0) + (row.closest_pts || 0) + (row.outcome_pts || 0));
+              const isYou = String(row.user_id) === String(currentUser?.id);
+              const htScored = row.ht_pts != null && row.ht_pts > 0;
+              const ftScored = row.ft_pts != null && row.ft_pts > 0;
+              const username = row.username
+                || (Array.isArray(row.users) ? row.users[0]?.username : row.users?.username)
+                || '—';
+              return (
+                <tr key={row.user_id} className={isYou ? 'bg-blue-50' : 'hover:bg-slate-50'}>
+                  <td className="w-8 px-3 py-2.5 text-xs font-bold text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-900">{username}</span>
+                      {isYou && (
+                        <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">You</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className={`px-3 py-2.5 text-center font-mono text-xs font-semibold tabular-nums ${htScored ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {row.ht_home != null ? `${row.ht_home}-${row.ht_away}` : '—'}
+                  </td>
+                  <td className={`px-3 py-2.5 text-center font-mono text-xs font-semibold tabular-nums ${ftScored ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {row.ft_home != null ? `${row.ft_home}-${row.ft_away}` : '—'}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-black tabular-nums text-slate-950">{total}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -814,7 +883,7 @@ function StandingsRow({ row, isCurrentUser, isSelected, onSelect }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading, refreshAll }) {
+export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading, refreshAll, token }) {
   const matchdays = useMemo(() => groupFixturesByMatchday(fixtures), [fixtures]);
   const defaultKey = useMemo(() => {
     const active = [...matchdays].reverse().find(isActiveReportDay);
@@ -824,6 +893,12 @@ export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading
   const [selectedKey, setSelectedKey] = useState('');
   const [copyState, setCopyState] = useState('Copy summary');
   const [selectedUsername, setSelectedUsername] = useState(null);
+
+  // Match predictions sheet
+  const [predMatch, setPredMatch] = useState(null);
+  const [predRows, setPredRows] = useState([]);
+  const [predLoading, setPredLoading] = useState(false);
+  const [predError, setPredError] = useState(null);
 
   const fixturesById = useMemo(() => new Map(fixtures.map((m) => [String(m.id), m])), [fixtures]);
   const activeKey = selectedKey || defaultKey;
@@ -861,12 +936,34 @@ export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading
   }
 
   useEffect(() => {
-    document.body.style.overflow = spotlightRow ? 'hidden' : '';
+    document.body.style.overflow = (spotlightRow || predMatch) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [spotlightRow]);
+  }, [spotlightRow, predMatch]);
 
   function handleSelectPlayer(username) {
     setSelectedUsername((prev) => (prev === username ? null : username));
+  }
+
+  async function openPredSheet(match) {
+    setPredMatch(match);
+    setPredRows([]);
+    setPredError(null);
+    setPredLoading(true);
+    try {
+      const data = await apiRequest(`/predictions/${match.id}/all`, { token });
+      const rows = Array.isArray(data) ? data : (data?.predictions ?? []);
+      setPredRows(rows);
+    } catch (err) {
+      setPredError(err.message || 'Could not load predictions.');
+    } finally {
+      setPredLoading(false);
+    }
+  }
+
+  function closePredSheet() {
+    setPredMatch(null);
+    setPredRows([]);
+    setPredError(null);
   }
 
   async function copySummary() {
@@ -966,7 +1063,7 @@ export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading
       {selectedMatchday?.matches.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {selectedMatchday.matches.map((match) => (
-            <MatchResultCard key={match.id} match={match} />
+            <MatchResultCard key={match.id} match={match} onClick={() => openPredSheet(match)} />
           ))}
         </div>
       )}
@@ -1064,6 +1161,112 @@ export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading
                   allRows={rows}
                   fixturesById={fixturesById}
                 />
+              )}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* ── Match predictions sheet ── */}
+      {createPortal(
+        <>
+          <div
+            aria-hidden="true"
+            onClick={closePredSheet}
+            className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${
+              predMatch ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={predMatch ? `Predictions: ${matchTitle(predMatch)}` : 'Match predictions'}
+            className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${
+              predMatch ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            {/* Sheet header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Eye className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
+                <div className="leading-tight min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">All Predictions</p>
+                  <p className="truncate text-sm font-black text-slate-950">{predMatch ? matchTitle(predMatch) : '—'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closePredSheet}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {predMatch && (
+                <>
+                  {/* Match result banner */}
+                  <div className="mb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Flag team={predMatch.home} />
+                      <p className="line-clamp-2 text-center text-xs font-bold text-slate-900">{teamName(predMatch.home)}</p>
+                    </div>
+                    <div className="text-center">
+                      {hasMatchScore(predMatch) ? (
+                        <p className="text-3xl font-black tabular-nums text-slate-950">{scoreText(predMatch)}</p>
+                      ) : (
+                        <p className="text-base font-black uppercase text-slate-400">VS</p>
+                      )}
+                      <p className={`mt-1 text-[10px] font-bold uppercase tracking-wide ${
+                        displayStatus(predMatch) === 'FINISHED' ? 'text-blue-600' :
+                        displayStatus(predMatch) === 'LIVE' ? 'text-red-600' : 'text-amber-600'
+                      }`}>{displayStatus(predMatch)}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Flag team={predMatch.away} />
+                      <p className="line-clamp-2 text-center text-xs font-bold text-slate-900">{teamName(predMatch.away)}</p>
+                    </div>
+                  </div>
+
+                  {predLoading && (
+                    <div className="flex items-center justify-center gap-2.5 py-16 text-sm font-medium text-slate-500">
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                      Loading predictions…
+                    </div>
+                  )}
+
+                  {predError && !predLoading && (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-8 text-center">
+                      <Lock className="h-8 w-8 text-amber-400" aria-hidden="true" />
+                      <div>
+                        <p className="font-bold text-slate-900">Predictions hidden</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {predError.includes('kickoff') || predError.includes('hidden')
+                            ? 'Predictions are revealed once the match kicks off.'
+                            : predError}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!predLoading && !predError && predRows.length === 0 && (
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-10 text-center">
+                      <AlertCircle className="h-8 w-8 text-slate-300" aria-hidden="true" />
+                      <div>
+                        <p className="font-bold text-slate-900">No predictions yet</p>
+                        <p className="mt-1 text-sm text-slate-500">No players have submitted a prediction for this match.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!predLoading && !predError && predRows.length > 0 && (
+                    <PredictionsTable rows={predRows} currentUser={currentUser} />
+                  )}
+                </>
               )}
             </div>
           </div>
