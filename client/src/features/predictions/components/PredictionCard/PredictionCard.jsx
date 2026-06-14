@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, Loader2, Save, Target } from 'lucide-react';
+import { Activity, CalendarDays, Eye, Loader2, Save, Target } from 'lucide-react';
 import { TeamBlock } from './TeamBlock';
 import { ScoreInputGroup } from './ScoreInputGroup';
 import { formatDate, formatTime } from '@/lib/date/index';
@@ -6,7 +6,7 @@ import { numberOrBlank, roundPoints } from '@/lib/utils/number';
 import { displayStatus, hasMatchScore, isPredictionLocked, scoreStatusLabel, scoreText, canShowMatchDetails, statusPillLabel } from '@/features/matches/utils/matchStatus';
 import { outcomeLabel } from '@/features/matches/utils/matchFormatters';
 
-export function PredictionCard({ match, draft, updateDraft, savePrediction, prediction, points, saving, onViewStats }) {
+export function PredictionCard({ match, draft, updateDraft, savePrediction, prediction, points, saving, onViewStats, onViewPredictions }) {
   const hasPrediction = Boolean(prediction);
   const locked = isPredictionLocked(match);
   const matchTotal = points
@@ -95,26 +95,28 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
 
       {/* ── Inputs ── */}
       <div className="border-t border-slate-100 bg-slate-50/60 px-3 py-3 sm:px-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <ScoreInputGroup
-            label="Half time"
-            homeValue={draft.ht_home ?? ''}
-            awayValue={draft.ht_away ?? ''}
-            onHome={(v) => updateDraft(match.id, 'ht_home', v)}
-            onAway={(v) => updateDraft(match.id, 'ht_away', v)}
-            disabled={locked}
-          />
-          <ScoreInputGroup
-            label="Full time"
-            homeValue={draft.ft_home ?? ''}
-            awayValue={draft.ft_away ?? ''}
-            onHome={(v) => updateDraft(match.id, 'ft_home', v)}
-            onAway={(v) => updateDraft(match.id, 'ft_away', v)}
-            required
-            disabled={locked}
-          />
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="flex items-end justify-center gap-4">
+            <ScoreInputGroup
+              label="Half time"
+              homeValue={draft.ht_home ?? ''}
+              awayValue={draft.ht_away ?? ''}
+              onHome={(v) => updateDraft(match.id, 'ht_home', v)}
+              onAway={(v) => updateDraft(match.id, 'ht_away', v)}
+              disabled={locked}
+            />
+            <ScoreInputGroup
+              label="Full time"
+              homeValue={draft.ft_home ?? ''}
+              awayValue={draft.ft_away ?? ''}
+              onHome={(v) => updateDraft(match.id, 'ft_home', v)}
+              onAway={(v) => updateDraft(match.id, 'ft_away', v)}
+              required
+              disabled={locked}
+            />
+          </div>
           <button
-            className={`btn h-[38px] flex-1 sm:flex-none sm:min-w-[90px] ${
+            className={`btn h-[38px] w-full ${
               isLive ? 'bg-rose-600 text-white shadow-sm hover:bg-rose-700' : 'btn-primary'
             }`}
             onClick={() => savePrediction(match)}
@@ -132,12 +134,20 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
           {hasPrediction && (
             <div className="flex min-w-0 items-center gap-1.5">
               <Target className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
-              <span className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">
-                  HT {numberOrBlank(prediction.ht_home) || '—'}-{numberOrBlank(prediction.ht_away) || '—'} / FT {prediction.ft_home}-{prediction.ft_away}
+              <span className="text-xs">
+                <span className={`font-semibold ${points?.ht_pts > 0 ? 'text-emerald-700' : 'text-slate-600'}`}>
+                  HT {numberOrBlank(prediction.ht_home) || '—'}-{numberOrBlank(prediction.ht_away) || '—'}
+                </span>
+                <span className="text-slate-400"> / </span>
+                <span className={`font-semibold ${points?.ft_pts > 0 ? 'text-emerald-700' : 'text-slate-600'}`}>
+                  FT {prediction.ft_home}-{prediction.ft_away}
                 </span>
               </span>
-              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
+              <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                points?.outcome_pts > 0
+                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                  : 'bg-slate-100 text-slate-500'
+              }`}>
                 {outcomeLabel(prediction.ft_home, prediction.ft_away)}
               </span>
             </div>
@@ -151,8 +161,15 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
                 { label: 'Closest', val: roundPoints(points.closest_pts || 0) },
                 { label: 'Outcome', val: points.outcome_pts || 0 },
               ].map(({ label, val }) => (
-                <span key={label} className="badge">
-                  {label} <span className={val > 0 ? 'font-semibold text-slate-800' : ''}>{val}</span>
+                <span
+                  key={label}
+                  className={`rounded-md px-1.5 py-1 text-[11px] font-medium ${
+                    val > 0
+                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                      : 'badge'
+                  }`}
+                >
+                  {label} <span className={val > 0 ? 'font-bold' : ''}>{val}</span>
                 </span>
               ))}
               <span className={`ml-1 rounded-lg px-2.5 py-1 text-sm font-bold ${
@@ -165,6 +182,17 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
             </div>
           )}
         </div>
+      )}
+      {/* ── View all predictions ── */}
+      {onViewPredictions && (
+        <button
+          type="button"
+          onClick={() => onViewPredictions(match)}
+          className="flex w-full items-center justify-center gap-1.5 border-t border-slate-100 py-2.5 text-[11px] font-semibold text-blue-500 transition hover:bg-slate-50 hover:text-blue-700"
+        >
+          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+          View all predictions
+        </button>
       )}
     </article>
   );
