@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, KeyRound, Loader2, Save, Settings2, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, KeyRound, Loader2, Save, Settings2, Trash2, X } from 'lucide-react';
 import { roundPoints } from '@/lib/utils/number';
 import { teamName } from '@/features/matches/utils/matchFormatters';
 import { AdminScorePair } from './AdminScorePair';
@@ -34,6 +34,8 @@ export function AdminPredictionRow({
   deleting,
 }) {
   const [showManage, setShowManage] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
 
   const p = row.points || {};
   const total = row.points
@@ -41,12 +43,21 @@ export function AdminPredictionRow({
     : 0;
 
   const isCurrentUser = String(row.user.id) === String(currentUser?.id);
-  const isProtectedAdmin = isCurrentUser || row.user.username === 'UvKal_zA' || row.user.isAdmin;
+  const isProtectedAdmin = isCurrentUser || row.user.is_admin === true;
   const hasPrediction = Boolean(row.prediction);
   const isDirty = FIELDS.some((k) => norm(draft[k]) !== norm(row.prediction?.[k]));
 
   const homeAbbr = abbr(match?.home);
   const awayAbbr = abbr(match?.away);
+
+  function handleSavePassword() {
+    if ((passwordDraft || '').length < 8) {
+      setPasswordError('Password must be at least 8 characters.');
+      return;
+    }
+    setPasswordError(null);
+    savePassword(row.user.id, row.user.username);
+  }
 
   return (
     <div
@@ -66,7 +77,7 @@ export function AdminPredictionRow({
               {isCurrentUser && (
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">You</span>
               )}
-              {row.user.isAdmin && (
+              {row.user.is_admin && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">Admin</span>
               )}
             </div>
@@ -124,7 +135,7 @@ export function AdminPredictionRow({
       <div className="mt-4 flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => setShowManage((v) => !v)}
+          onClick={() => { setShowManage((v) => !v); setConfirmingDelete(false); setPasswordError(null); }}
           className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
           aria-expanded={showManage}
         >
@@ -150,34 +161,68 @@ export function AdminPredictionRow({
       {/* Account management (collapsible) */}
       {showManage && (
         <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4">
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <input
-              className="field"
-              type="password"
-              placeholder="Set new password"
-              value={passwordDraft}
-              onChange={(e) => updatePasswordDraft(row.user.id, e.target.value)}
-              minLength={4}
-              autoComplete="new-password"
-            />
-            <button
-              className="btn btn-secondary"
-              onClick={() => savePassword(row.user.id, row.user.username)}
-              disabled={savingPassword || !passwordDraft}
-            >
-              {savingPassword ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
-              Reset password
-            </button>
+          {/* Password reset */}
+          <div className="grid gap-1.5">
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input
+                className="field"
+                type="password"
+                placeholder="Set new password (min 8 chars)"
+                value={passwordDraft}
+                onChange={(e) => { updatePasswordDraft(row.user.id, e.target.value); setPasswordError(null); }}
+                minLength={8}
+                autoComplete="new-password"
+              />
+              <button
+                className="btn btn-secondary"
+                onClick={handleSavePassword}
+                disabled={savingPassword || !passwordDraft}
+              >
+                {savingPassword ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
+                Reset password
+              </button>
+            </div>
+            {passwordError && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {passwordError}
+              </p>
+            )}
           </div>
+
+          {/* Delete account */}
           {!isProtectedAdmin && (
-            <button
-              className="btn btn-danger justify-self-start"
-              onClick={() => deleteUser(row.user.id, row.user.username)}
-              disabled={deleting}
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
-              Delete account
-            </button>
+            confirmingDelete ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" aria-hidden="true" />
+                <span className="flex-1 text-sm font-semibold text-red-700">
+                  Delete <strong>{row.user.username}</strong> and all their data? This cannot be undone.
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => { deleteUser(row.user.id, row.user.username); setConfirmingDelete(false); }}
+                    disabled={deleting}
+                  >
+                    {deleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                    Confirm delete
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => setConfirmingDelete(false)}>
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="btn btn-danger justify-self-start"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={deleting}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete account
+              </button>
+            )
           )}
         </div>
       )}

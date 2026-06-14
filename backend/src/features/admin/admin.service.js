@@ -18,7 +18,7 @@ async function getPredictionsForMatch(matchId) {
   const id = String(matchId);
   const [{ data: users, error: usersErr }, { data: predictions, error: predsErr }, { data: points, error: ptsErr }] =
     await Promise.all([
-      supabase.from('users').select('id, username, pick1, pick2, created_at').order('username'),
+      supabase.from('users').select('id, username, pick1, pick2, is_admin, created_at').order('username'),
       supabase.from('predictions').select('user_id, match_id, ht_home, ht_away, ft_home, ft_away, submitted_at').eq('match_id', id),
       supabase.from('points').select('user_id, match_id, ht_pts, ft_pts, closest_pts, outcome_pts').eq('match_id', id),
     ]);
@@ -68,7 +68,7 @@ async function deleteUser(userId, requestingAdminId) {
   if (String(userId) === String(requestingAdminId)) {
     throw new ValidationError('Admin account cannot delete itself');
   }
-  const user = await supabase.from('users').select('id, username').eq('id', userId).single();
+  const user = await supabase.from('users').select('id, username, is_admin').eq('id', userId).single();
   if (user.error || !user.data) throw new NotFoundError('User not found');
   if (isAdminUser(user.data)) throw new ValidationError('Admin account cannot be deleted');
   await deleteUserAccount(userId);

@@ -334,8 +334,8 @@ function App() {
 
   async function saveAdminPassword(userId, username) {
     const password = (adminPasswordDrafts[userId] || '').trim();
-    if (password.length < 4) {
-      setNotice({ type: 'error', message: 'Password must be at least 4 characters.' });
+    if (password.length < 8) {
+      setNotice({ type: 'error', message: 'Password must be at least 8 characters.' });
       return;
     }
     setAdminPasswordSavingUserId(userId);
@@ -352,13 +352,6 @@ function App() {
   }
 
   async function deleteAdminUser(userId, username) {
-    if (String(userId) === String(user?.id) || username === 'UvKal_zA') {
-      setNotice({ type: 'error', message: 'Admin account cannot be deleted from this view.' });
-      return;
-    }
-    const confirmed = window.confirm(`Delete ${username} and all related predictions and points? This cannot be undone.`);
-    if (!confirmed) return;
-
     setAdminDeletingUserId(userId);
     setNotice(null);
     try {
