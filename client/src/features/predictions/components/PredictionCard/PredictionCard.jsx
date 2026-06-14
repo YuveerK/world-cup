@@ -53,20 +53,30 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
 
         <div className="flex flex-col items-center gap-2 sm:gap-3">
           {hasMatchScore(match) ? (
-            <div className={`rounded-xl px-3 py-2.5 text-center sm:px-5 sm:py-3 ${
-              isLive
-                ? 'bg-rose-50 ring-1 ring-rose-200'
-                : 'bg-slate-900 ring-1 ring-slate-800'
-            }`}>
-              <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{scoreStatusLabel(match)}</p>
-              <p className={`whitespace-nowrap text-2xl font-bold tabular-nums sm:text-3xl ${isLive ? 'text-rose-700' : 'text-white'}`}>
+            <div className="text-center">
+              <p className={`whitespace-nowrap text-2xl font-black tabular-nums leading-none sm:text-3xl ${
+                isLive ? 'text-red-600' : 'text-slate-950'
+              }`}>
                 {scoreText(match)}
               </p>
+              {isLive ? (
+                <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-red-600">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                  </span>
+                  LIVE
+                </span>
+              ) : (
+                <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
+                  {scoreStatusLabel(match)}
+                </p>
+              )}
             </div>
           ) : (
-            <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center ring-1 ring-slate-100 sm:px-5 sm:py-3">
-              <p className="text-xl font-bold text-slate-300 sm:text-2xl">vs</p>
-              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">{formatTime(match.date)}</p>
+            <div className="text-center">
+              <p className="text-xl font-black uppercase leading-none text-slate-300 sm:text-2xl">vs</p>
+              <p className="mt-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-400">{formatTime(match.date)}</p>
             </div>
           )}
           {canShowMatchDetails(match) && (

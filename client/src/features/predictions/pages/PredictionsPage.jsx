@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingPanel } from '@/components/feedback/LoadingPanel';
-import { ConnectionPanel } from '@/components/feedback/ConnectionPanel';
 import { AuthCard } from '@/features/auth/components/AuthCard';
-import { LeaderboardPanel } from '@/features/leaderboard/components/LeaderboardPanel';
 import { dayKeyOf, formatDayHeading } from '@/lib/date/index';
 import { displayStatus, isPastMatch } from '@/features/matches/utils/matchStatus';
 import { SummaryStrip } from '../components/SummaryStrip';
@@ -97,7 +95,7 @@ export function PredictionsPage({
   const groupsToRender = activeDay === 'ALL' ? dayGroups : dayGroups.filter((group) => group.key === activeDay);
 
   return (
-    <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <section className="min-w-0 space-y-6">
         {notice}
 
@@ -177,10 +175,6 @@ export function PredictionsPage({
         )}
       </section>
 
-      <aside className="min-w-0 space-y-6">
-        <ConnectionPanel loading={loading} />
-        <LeaderboardPanel leaderboard={leaderboard} currentUser={user} loading={loading} />
-      </aside>
     </main>
   );
 }
