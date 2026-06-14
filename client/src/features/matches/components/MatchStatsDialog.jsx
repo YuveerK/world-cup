@@ -304,9 +304,10 @@ function LineupPanel({ label, team, fallbackName, accent, subMap }) {
         </div>
       </div>
 
-      <PlayerList title="Starters" players={team?.starters || []} subMap={subMap} />
-      <div className="mt-5">
-        <PlayerList title="Substitutes" players={team?.substitutes || []} subMap={subMap} compact />
+      <h4 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Starters</h4>
+      <GroupedStarterList players={team?.starters || []} subMap={subMap} />
+      <div className="mt-6">
+        <PlayerList title="Substitutes" players={team?.substitutes || []} subMap={subMap} compact showPosition />
       </div>
     </section>
   );
@@ -339,6 +340,74 @@ const POSITION_TINT = {
   FW: 'bg-rose-100 text-rose-700',
 };
 
+const POSITION_GROUPS = [
+  { key: 'GK', label: 'Goalkeepers',  header: 'border border-amber-200 bg-amber-50 text-amber-700' },
+  { key: 'DF', label: 'Defenders',    header: 'border border-sky-200 bg-sky-50 text-sky-700' },
+  { key: 'MF', label: 'Midfielders',  header: 'border border-blue-200 bg-blue-50 text-blue-700' },
+  { key: 'FW', label: 'Forwards',     header: 'border border-rose-200 bg-rose-50 text-rose-700' },
+];
+
+function PlayerRow({ player, subMap, compact, showPosition }) {
+  return (
+    <div
+      key={`${player.id}-${player.shirtNumber}-${player.name}`}
+      className="grid grid-cols-[32px_1fr_auto] items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 transition hover:border-slate-200 hover:bg-white"
+    >
+      <span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">
+        {player.shirtNumber || '-'}
+      </span>
+      <div className="flex min-w-0 items-center gap-2">
+        <p className={`truncate font-semibold text-slate-900 ${compact ? 'text-sm' : 'text-[15px]'}`}>
+          {player.name || 'Unnamed player'}
+          {player.captain && <span className="ml-2 text-[10px] font-black text-amber-500">C</span>}
+        </p>
+        <SubBadge info={subMap?.get(player.id)} />
+      </div>
+      {showPosition && (
+        <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${POSITION_TINT[player.position] || 'bg-slate-100 text-slate-500'}`}>
+          {player.position || '-'}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function GroupedStarterList({ players, subMap }) {
+  if (!players.length) {
+    return <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">Not available.</p>;
+  }
+
+  const grouped = Object.fromEntries(POSITION_GROUPS.map((g) => [g.key, []]));
+  for (const p of players) {
+    const key = grouped[p.position] !== undefined ? p.position : 'MF';
+    grouped[key].push(p);
+  }
+
+  return (
+    <div className="space-y-4">
+      {POSITION_GROUPS.map(({ key, label, header }) => {
+        const group = grouped[key];
+        if (!group.length) return null;
+        return (
+          <div key={key}>
+            <div className="mb-2 flex items-center gap-2">
+              <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${header}`}>
+                {label}
+              </span>
+              <div className="h-px flex-1 bg-slate-100" />
+            </div>
+            <div className="grid gap-1.5">
+              {group.map((player) => (
+                <PlayerRow key={`${player.id}-${player.shirtNumber}`} player={player} subMap={subMap} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PlayerList({ title, players, compact, subMap }) {
   return (
     <div>
@@ -346,24 +415,13 @@ function PlayerList({ title, players, compact, subMap }) {
       {players.length ? (
         <div className="grid gap-1.5">
           {players.map((player) => (
-            <div
+            <PlayerRow
               key={`${player.id}-${player.shirtNumber}-${player.name}`}
-              className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 transition hover:border-slate-200 hover:bg-white"
-            >
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-900 text-sm font-bold text-white">
-                {player.shirtNumber || '-'}
-              </span>
-              <div className="flex min-w-0 items-center gap-2">
-                <p className={`truncate font-semibold text-slate-900 ${compact ? 'text-sm' : 'text-[15px]'}`}>
-                  {player.name || 'Unnamed player'}
-                  {player.captain && <span className="ml-2 text-[10px] font-black text-amber-500">C</span>}
-                </p>
-                <SubBadge info={subMap?.get(player.id)} />
-              </div>
-              <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${POSITION_TINT[player.position] || 'bg-slate-100 text-slate-500'}`}>
-                {player.position || '-'}
-              </span>
-            </div>
+              player={player}
+              subMap={subMap}
+              compact={compact}
+              showPosition
+            />
           ))}
         </div>
       ) : (
