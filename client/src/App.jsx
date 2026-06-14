@@ -26,7 +26,7 @@ function App() {
   const [points, setPoints] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [winnerPick, setWinnerPick] = useState('');
-  const [authMode, setAuthMode] = useState('signup');
+  const [authMode, setAuthMode] = useState('login');
   const [adminMatchId, setAdminMatchId] = useState('');
   const [adminRows, setAdminRows] = useState([]);
   const [adminDrafts, setAdminDrafts] = useState({});
@@ -560,6 +560,7 @@ function App() {
                     currentUser={user}
                     loading={loading}
                     refreshAll={() => refreshAll(token)}
+                    token={token}
                   />
                 </section>
               </main>
@@ -600,6 +601,7 @@ function App() {
           element={
             <PredictionsPage
               notice={noticeEl}
+              authNotice={notice}
               isAuthed={isAuthed}
               isRestoringSession={isRestoringSession}
               loading={loading}

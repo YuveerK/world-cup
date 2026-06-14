@@ -33,6 +33,7 @@ function groupFixturesByDay(fixtures) {
 
 export function PredictionsPage({
   notice,
+  authNotice,
   isAuthed,
   isRestoringSession,
   loading,
@@ -94,6 +95,22 @@ export function PredictionsPage({
 
   const groupsToRender = activeDay === 'ALL' ? dayGroups : dayGroups.filter((group) => group.key === activeDay);
 
+  if (!isAuthed && !isRestoringSession) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-auto">
+        <AuthCard
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          credentials={credentials}
+          setCredentials={setCredentials}
+          handleAuth={handleAuth}
+          busy={busy}
+          notice={authNotice}
+        />
+      </div>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <section className="min-w-0 space-y-6">
@@ -101,19 +118,6 @@ export function PredictionsPage({
 
         {isRestoringSession ? (
           <LoadingPanel label="Restoring session" />
-        ) : !isAuthed ? (
-          <AuthCard
-            authMode={authMode}
-            setAuthMode={setAuthMode}
-            credentials={credentials}
-            setCredentials={setCredentials}
-            handleAuth={handleAuth}
-            busy={busy}
-            loading={loading}
-            fixtures={fixtures}
-            onViewStats={onViewStats}
-            notice={notice}
-          />
         ) : (
           <>
             <SummaryStrip
@@ -212,7 +216,7 @@ function DaySection({
         <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         {group.matches.map((match) => (
           <PredictionCard
             key={match.id}
