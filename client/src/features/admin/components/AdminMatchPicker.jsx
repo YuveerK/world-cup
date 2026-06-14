@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Activity, Check, Pencil, Search, X } from 'lucide-react';
 import { dayKeyOf, formatDayHeading, formatTime } from '@/lib/date/index';
-import { canShowMatchDetails, displayStatus, hasMatchScore, scoreText } from '@/features/matches/utils/matchStatus';
+import { canShowMatchDetails, displayStatus, formatMatchMinute, hasMatchScore, isHalfTime, scoreText } from '@/features/matches/utils/matchStatus';
 import { teamName } from '@/features/matches/utils/matchFormatters';
 import { MatchDayNav } from '@/features/predictions/components/MatchDayNav';
 
@@ -143,7 +143,13 @@ export function AdminMatchPicker({ fixtures, selectedMatch, selectedMatchId, onS
               {hasMatchScore(selectedMatch) && (
                 <p className="mt-1.5 text-2xl font-black tabular-nums text-slate-950">{scoreText(selectedMatch)}</p>
               )}
-              <p className="mt-0.5 text-[11px] font-medium text-slate-400">{formatTime(selectedMatch.date)}</p>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+                {displayStatus(selectedMatch) === 'LIVE'
+                  ? isHalfTime(selectedMatch)
+                    ? 'HT'
+                    : (formatMatchMinute(selectedMatch.minute) ?? formatTime(selectedMatch.date))
+                  : formatTime(selectedMatch.date)}
+              </p>
             </div>
             <TeamBlock team={selectedMatch.away} align="right" />
           </div>
