@@ -50,14 +50,15 @@ export function MatchStatsDialog({ match, stats, loading, error, onClose }) {
       ? 'FT'
       : scoreStatusLabel(match);
   const subMap = buildSubMap(stats?.events || []);
-  const [tab, setTab] = useState('summary');
+  const isUpcoming = status !== 'LIVE' && status !== 'FINISHED';
+  const [tab, setTab] = useState(isUpcoming ? 'lineups' : 'summary');
 
   const tabs = [
     { id: 'summary', label: 'Summary', icon: LayoutGrid },
     ...(stats?.teamStats ? [{ id: 'stats', label: 'Stats', icon: BarChart3 }] : []),
     { id: 'lineups', label: 'Lineups', icon: Users },
   ];
-  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'summary';
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : (isUpcoming ? 'lineups' : 'summary');
 
   useEffect(() => {
     function onKey(e) {
@@ -85,7 +86,7 @@ export function MatchStatsDialog({ match, stats, loading, error, onClose }) {
 
           <div className="relative flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/90">Match details</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/90">{isUpcoming ? 'Team Lineups' : 'Match details'}</p>
               <p className="mt-1 text-xs font-medium text-blue-200/80">
                 {formatDate(match.date)} · {formatTime(match.date)}
               </p>
@@ -150,6 +151,11 @@ export function MatchStatsDialog({ match, stats, loading, error, onClose }) {
             <LoadingPanel label="Loading match details" />
           ) : error ? (
             <EmptyState title="Could not load match details" detail={error} />
+          ) : !stats && isUpcoming ? (
+            <EmptyState
+              title="Lineups not released yet"
+              detail="Team lineups are typically published around 1 hour before kickoff. Check back closer to the match."
+            />
           ) : stats ? (
             <div className="space-y-5">
               {activeTab === 'summary' && (

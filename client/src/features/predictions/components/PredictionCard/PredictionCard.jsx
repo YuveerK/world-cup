@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, Eye, Loader2, Save, Target } from 'lucide-react';
+import { Activity, CalendarDays, Eye, Loader2, Save, Target, Users } from 'lucide-react';
 import { TeamBlock } from './TeamBlock';
 import { ScoreInputGroup } from './ScoreInputGroup';
 import { formatDate, formatTime } from '@/lib/date/index';
@@ -82,10 +82,14 @@ export function PredictionCard({ match, draft, updateDraft, savePrediction, pred
               <p className="mt-1 text-[10px] font-medium uppercase tracking-widest text-slate-400">{formatTime(match.date)}</p>
             </div>
           )}
-          {canShowMatchDetails(match) && (
+          {(canShowMatchDetails(match) || (match?.home?.abbreviation !== 'TBD' && match?.away?.abbreviation !== 'TBD')) && (
             <button className="btn btn-secondary px-2.5 py-1 text-xs" onClick={() => onViewStats(match)}>
-              <Activity className="h-3 w-3" aria-hidden="true" />
-              Stats
+              {canShowMatchDetails(match) ? (
+                <Activity className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <Users className="h-3 w-3" aria-hidden="true" />
+              )}
+              {canShowMatchDetails(match) ? 'Stats' : 'Lineups'}
             </button>
           )}
         </div>
