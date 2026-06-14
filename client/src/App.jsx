@@ -623,6 +623,7 @@ function App() {
               handleAuth={handleAuth}
               busy={busy}
               user={user}
+              token={token}
               predictions={predictions}
               totals={totals}
               leaderboard={leaderboard}
