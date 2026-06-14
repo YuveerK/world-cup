@@ -5,19 +5,19 @@ const PODIUM_STYLES = {
   1: {
     ring: 'ring-amber-400',
     avatar: 'from-amber-300 to-yellow-500 text-blue-950',
-    block: 'from-amber-400/90 to-yellow-500/80 h-28',
+    block: 'from-amber-400/90 to-yellow-500/80 h-28 lg:h-40',
     accent: 'text-amber-500',
   },
   2: {
     ring: 'ring-slate-300',
     avatar: 'from-slate-200 to-slate-400 text-slate-800',
-    block: 'from-slate-300/80 to-slate-400/60 h-20',
+    block: 'from-slate-300/80 to-slate-400/60 h-20 lg:h-28',
     accent: 'text-slate-500',
   },
   3: {
     ring: 'ring-orange-300',
     avatar: 'from-orange-300 to-amber-600 text-blue-950',
-    block: 'from-orange-400/80 to-amber-600/60 h-16',
+    block: 'from-orange-400/80 to-amber-600/60 h-16 lg:h-20',
     accent: 'text-orange-500',
   },
 };
@@ -87,7 +87,7 @@ export function Podium({ rows, currentUser, onSelect }) {
   const ordered = [top3[1], top3[0], top3[2]].filter(Boolean);
 
   return (
-    <div className="panel px-4 py-7 sm:px-8">
+    <div className="panel px-4 py-7 sm:px-8 lg:py-10">
       <div className="flex items-end justify-center gap-2 sm:gap-5">
         {ordered.map((row) => (
           <PodiumCard

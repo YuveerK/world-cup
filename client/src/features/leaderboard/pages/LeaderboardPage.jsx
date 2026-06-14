@@ -36,8 +36,11 @@ export function LeaderboardPage({ leaderboard, fixturesById, currentUser, loadin
   if (!leaderboard.length)
     return <EmptyState title="No leaderboard yet" detail="Players will appear after accounts and predictions are created." />;
 
+  const maxPoints = leaderboard[0]?.total || 1;
+
   return (
     <div className="space-y-6">
+      {/* Page header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="mb-1.5 flex items-center gap-2">
@@ -54,27 +57,34 @@ export function LeaderboardPage({ leaderboard, fixturesById, currentUser, loadin
         </button>
       </div>
 
-      {/* Summary tiles */}
+      {/* Summary tiles — always full width */}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile icon={Crown} tint="amber" label="Leader" value={leader?.username || '-'} />
         <StatTile icon={Medal} tint="blue" label="Players" value={leaderboard.length} />
         <StatTile icon={Target} tint="sky" label="Scored predictions" value={scoredPredictions} />
       </div>
 
-      {/* Podium */}
-      <Podium rows={leaderboard} currentUser={currentUser} />
+      {/* Two-column on desktop: podium (sticky left) + player list (right) */}
+      <div className="grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start">
 
-      {/* Full ranking */}
-      <div className="space-y-2">
-        {leaderboard.map((row) => (
-          <PlayerRow
-            key={row.id || row.username}
-            row={row}
-            fixturesById={fixturesById}
-            currentUser={currentUser}
-            onViewStats={onViewStats}
-          />
-        ))}
+        {/* Left: Podium — sticky so it stays visible while scrolling the list */}
+        <div className="min-w-0 lg:sticky lg:top-24">
+          <Podium rows={leaderboard} currentUser={currentUser} />
+        </div>
+
+        {/* Right: Full player ranking */}
+        <div className="min-w-0 space-y-2">
+          {leaderboard.map((row) => (
+            <PlayerRow
+              key={row.id || row.username}
+              row={row}
+              fixturesById={fixturesById}
+              currentUser={currentUser}
+              maxPoints={maxPoints}
+              onViewStats={onViewStats}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -100,7 +110,7 @@ function StatTile({ icon: Icon, tint, label, value }) {
   );
 }
 
-function PlayerRow({ row, fixturesById, currentUser, onViewStats }) {
+function PlayerRow({ row, fixturesById, currentUser, maxPoints, onViewStats }) {
   const isCurrentUser = row.username === currentUser?.username;
   const rankBadge =
     row.rank === 1 ? 'bg-amber-100 text-amber-700' :
@@ -117,32 +127,43 @@ function PlayerRow({ row, fixturesById, currentUser, onViewStats }) {
         isCurrentUser ? 'border-blue-200 bg-blue-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
       }`}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5">
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-sm font-bold ${rankBadge}`}>
-          {row.rank}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-bold text-slate-950">{row.username}</p>
-            {isCurrentUser && (
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
-                You
-              </span>
-            )}
+      <summary className="block cursor-pointer list-none">
+        <div className="flex items-center gap-3 px-4 py-3.5">
+          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-sm font-bold ${rankBadge}`}>
+            {row.rank}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-bold text-slate-950">{row.username}</p>
+              {isCurrentUser && (
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
+                  You
+                </span>
+              )}
+            </div>
+            <p className="truncate text-xs text-slate-500">
+              {row.predictions_count || 0} predictions · Winner:{' '}
+              <span className="font-medium text-slate-700">{row.winner || 'Not set'}</span>
+            </p>
           </div>
-          <p className="truncate text-xs text-slate-500">
-            {row.predictions_count || 0} predictions · Winner:{' '}
-            <span className="font-medium text-slate-700">{row.winner || 'Not set'}</span>
-          </p>
+          <div className="text-right">
+            <p className="text-xl font-black leading-none text-slate-950">{row.total}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">points</p>
+          </div>
+          <ChevronDown
+            className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 group-open:rotate-180"
+            aria-hidden="true"
+          />
         </div>
-        <div className="text-right">
-          <p className="text-xl font-black leading-none text-slate-950">{row.total}</p>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">points</p>
+        {/* Progress bar — inside summary so it's always visible */}
+        <div className="h-1.5 w-full bg-slate-100">
+          <div
+            className={`h-full transition-all duration-500 ${
+              row.rank === 1 ? 'bg-amber-400' : row.rank === 2 ? 'bg-slate-400' : row.rank === 3 ? 'bg-orange-400' : 'bg-blue-400'
+            }`}
+            style={{ width: `${Math.round(((row.total || 0) / maxPoints) * 100)}%` }}
+          />
         </div>
-        <ChevronDown
-          className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 group-open:rotate-180"
-          aria-hidden="true"
-        />
       </summary>
 
       <div className="border-t border-slate-200 px-4 py-4">
