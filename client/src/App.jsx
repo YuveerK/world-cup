@@ -55,9 +55,20 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Clear notice whenever the user navigates to a different page
+  useEffect(() => { setNotice(null); }, [location.pathname]);
+
+  // Auto-dismiss success notices after 3 seconds
+  useEffect(() => {
+    if (notice?.type === 'success') {
+      const t = setTimeout(() => setNotice(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [notice]);
+
   const isAuthed = Boolean(token && user);
   const isRestoringSession = Boolean(token && !user && loading);
-  const isAdmin = Boolean(user?.isAdmin || user?.username === 'UvKal_zA');
+  const isAdmin = Boolean(user?.isAdmin);
 
   const predictionsByMatch = useMemo(() => {
     return new Map(predictions.map((p) => [String(p.match_id), p]));
