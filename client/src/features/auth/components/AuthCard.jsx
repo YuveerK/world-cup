@@ -69,7 +69,7 @@ export function AuthCard({ authMode, setAuthMode, credentials, setCredentials, h
               value={credentials.password}
               onChange={(e) => setCredentials((c) => ({ ...c, password: e.target.value }))}
               autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
-              minLength={4}
+              minLength={8}
               required
             />
           </label>

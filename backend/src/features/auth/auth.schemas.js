@@ -6,7 +6,7 @@ function validateSignup(req) {
   const { username, password } = req.body;
   if (!username || !password) throw new ValidationError('username and password required');
   if (username.trim().length < 2) throw new ValidationError('Username must be at least 2 characters');
-  if (password.length < 4) throw new ValidationError('Password must be at least 4 characters');
+  if (password.length < 8) throw new ValidationError('Password must be at least 8 characters');
 }
 
 function validateLogin(req) {
@@ -24,7 +24,7 @@ function validateChangeUsername(req) {
 function validateChangePassword(req) {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) throw new ValidationError('currentPassword and newPassword required');
-  if (newPassword.length < 4) throw new ValidationError('Password must be at least 4 characters');
+  if (newPassword.length < 8) throw new ValidationError('Password must be at least 8 characters');
 }
 
 function validateDeleteAccount(req) {

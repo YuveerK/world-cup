@@ -11,13 +11,11 @@ import { usePredictionDrafts } from '@/features/predictions/hooks/usePredictionD
 import { PredictionsPage } from '@/features/predictions/pages/PredictionsPage';
 import { LeaderboardPage } from '@/features/leaderboard/pages/LeaderboardPage';
 import { MatchdayReportPage } from '@/features/reports/pages/MatchdayReportPage';
-import { SummaryPage } from '@/features/summaries/pages/SummaryPage';
 import { AdminPage } from '@/features/admin/pages/AdminPage';
 import { ProfilePage } from '@/features/account/pages/ProfilePage';
 import { isRealTeam } from '@/features/matches/utils/matchFormatters';
 import { teamName } from '@/features/matches/utils/matchFormatters';
 import { parseScore } from '@/lib/utils/number';
-import { summaryPlayerKey } from '@/features/predictions/utils/predictionDisplay';
 import { getStoredToken, storeToken, clearStoredToken } from '@/lib/storage/tokenStorage';
 
 function App() {
@@ -29,8 +27,6 @@ function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [winnerPick, setWinnerPick] = useState('');
   const [authMode, setAuthMode] = useState('signup');
-  const [summaryPlayerId, setSummaryPlayerId] = useState('');
-  const [summaryMatchId, setSummaryMatchId] = useState('');
   const [adminMatchId, setAdminMatchId] = useState('');
   const [adminRows, setAdminRows] = useState([]);
   const [adminDrafts, setAdminDrafts] = useState({});
@@ -191,21 +187,6 @@ function App() {
     if (first) setAdminMatchId(String(first.id));
   }, [location.pathname, adminMatchId, fixtures, isAdmin]);
 
-  useEffect(() => {
-    if (!isAuthed || location.pathname !== '/summaries' || summaryPlayerId || !leaderboard.length) return;
-    const current = leaderboard.find((row) => row.username === user?.username) || leaderboard[0];
-    setSummaryPlayerId(summaryPlayerKey(current));
-  }, [location.pathname, isAuthed, leaderboard, summaryPlayerId, user]);
-
-  useEffect(() => {
-    if (!isAuthed || location.pathname !== '/summaries' || summaryMatchId || !fixtures.length) return;
-    const sorted = [...fixtures].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    const preferred = sorted.find((match) => {
-      const s = match.status;
-      return s === 'LIVE' || s === 'FINISHED';
-    }) || sorted[0];
-    if (preferred) setSummaryMatchId(String(preferred.id));
-  }, [location.pathname, fixtures, isAuthed, summaryMatchId]);
 
   useEffect(() => {
     if (!isAdmin || location.pathname !== '/admin' || !adminMatchId) return;
@@ -446,8 +427,8 @@ function App() {
 
   async function changePassword(event) {
     event.preventDefault();
-    if (passwordForm.newPassword.length < 4) {
-      setNotice({ type: 'error', message: 'Password must be at least 4 characters.' });
+    if (passwordForm.newPassword.length < 8) {
+      setNotice({ type: 'error', message: 'Password must be at least 8 characters.' });
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -457,11 +438,12 @@ function App() {
     setSavingPassword(true);
     setNotice(null);
     try {
-      await apiRequest('/auth/password', {
+      const data = await apiRequest('/auth/password', {
         method: 'PUT',
         token,
         body: { currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword },
       });
+      if (data.token) { storeToken(data.token); setToken(data.token); }
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setNotice({ type: 'success', message: 'Password updated.' });
     } catch (error) {
@@ -534,36 +516,6 @@ function App() {
                     loading={adminLoading}
                     refresh={() => loadAdminPredictions(adminMatchId)}
                     onViewStats={matchStats.open}
-                  />
-                </section>
-              </main>
-            )
-          }
-        />
-        <Route
-          path="/summaries"
-          element={
-            loading ? (
-              <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <LoadingPanel label="Loading" />
-              </main>
-            ) : !isAuthed ? (
-              <Navigate to="/" replace />
-            ) : (
-              <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <section className="space-y-6">
-                  {noticeEl}
-                  <SummaryPage
-                    leaderboard={leaderboard}
-                    fixtures={fixtures}
-                    fixturesById={fixturesById}
-                    currentUser={user}
-                    loading={loading}
-                    selectedPlayerId={summaryPlayerId}
-                    setSelectedPlayerId={setSummaryPlayerId}
-                    selectedMatchId={summaryMatchId}
-                    setSelectedMatchId={setSummaryMatchId}
-                    refreshAll={() => refreshAll(token)}
                   />
                 </section>
               </main>

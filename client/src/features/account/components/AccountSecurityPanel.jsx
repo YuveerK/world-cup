@@ -16,10 +16,10 @@ export function AccountSecurityPanel({ form, setForm, saving, onSubmit }) {
           autoComplete="current-password" required />
         <input className="field" type="password" placeholder="New password" value={form.newPassword}
           onChange={(e) => setForm((c) => ({ ...c, newPassword: e.target.value }))}
-          autoComplete="new-password" minLength={4} required />
+          autoComplete="new-password" minLength={8} required />
         <input className="field" type="password" placeholder="Confirm new password" value={form.confirmPassword}
           onChange={(e) => setForm((c) => ({ ...c, confirmPassword: e.target.value }))}
-          autoComplete="new-password" minLength={4} required />
+          autoComplete="new-password" minLength={8} required />
       </div>
 
       <button className="btn btn-primary mt-4 w-full" disabled={saving}>

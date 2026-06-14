@@ -18,7 +18,7 @@ const errorHandler = require('./shared/middleware/errorHandler');
 const app = express();
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '50kb' }));
 
 // Health check — imported by tests to confirm app boots without side effects
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

@@ -29,8 +29,10 @@ const changeUsername = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-  await authService.changePassword(req.user.id, req.body.currentPassword, req.body.newPassword);
-  res.json({ success: true });
+  const result = await authService.changePassword(
+    req.user.id, req.body.currentPassword, req.body.newPassword, req.user.isAdmin
+  );
+  res.json(result);
 });
 
 const deleteAccount = asyncHandler(async (req, res) => {

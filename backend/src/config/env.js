@@ -11,7 +11,7 @@ module.exports = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
   CORS_ORIGINS: (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
-  ADMIN_BOOTSTRAP_USERNAME: process.env.ADMIN_BOOTSTRAP_USERNAME || 'UvKal_zA',
+  ADMIN_BOOTSTRAP_USERNAME: process.env.ADMIN_BOOTSTRAP_USERNAME || '',
   ADMIN_USER_IDS: (process.env.ADMIN_USER_IDS || process.env.ADMIN_USER_ID || '')
     .split(',').map((s) => s.trim()).filter(Boolean),
 };

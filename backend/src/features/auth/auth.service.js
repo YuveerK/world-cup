@@ -62,13 +62,17 @@ async function changeUsername(userId, newUsername, currentPassword, tokenIsAdmin
   return { token: makeToken(updated, admin), user: toUserDto(updated, admin) };
 }
 
-async function changePassword(userId, currentPassword, newPassword) {
+async function changePassword(userId, currentPassword, newPassword, tokenIsAdmin) {
   const user = await usersRepo.findByIdMinimal(userId);
   if (!user) throw new NotFoundError('User not found');
   const ok = await bcrypt.compare(currentPassword, user.password);
   if (!ok) throw new UnauthorizedError('Current password is incorrect');
   const hash = await bcrypt.hash(newPassword, 10);
   await usersRepo.updatePassword(userId, hash);
+  // Issue a fresh token so the current session stays valid with the new credentials
+  const fullUser = await usersRepo.findById(userId);
+  const admin = Boolean(tokenIsAdmin || isAdminUser(fullUser));
+  return { token: makeToken(fullUser, admin) };
 }
 
 async function updatePicks(userId, pick1, pick2) {
