@@ -112,6 +112,7 @@ export function PredictionsPage({
             loading={loading}
             fixtures={fixtures}
             onViewStats={onViewStats}
+            notice={notice}
           />
         ) : (
           <>
