@@ -58,7 +58,11 @@ export function PredictionCard({
   const isUpcoming = !locked;
 
   // Dirty check: draft differs from saved prediction?
-  const isDirty = hasPrediction
+  // An empty draft object means the usePredictionDrafts effect hasn't seeded it yet
+  // (one render behind predictions loading). Treat unseeded drafts as matching the
+  // prediction so the button never flashes blue before the seed effect fires.
+  const draftSeeded = Object.keys(draft).length > 0;
+  const isDirty = !draftSeeded ? false : hasPrediction
     ? !numEq(draft.ht_home, prediction.ht_home) ||
       !numEq(draft.ht_away, prediction.ht_away) ||
       !numEq(draft.ft_home, prediction.ft_home) ||
