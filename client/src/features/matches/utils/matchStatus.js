@@ -31,14 +31,17 @@ export function formatMatchMinute(minute) {
 }
 
 export function displayStatus(match) {
+  // A match that hasn't kicked off yet cannot be LIVE or FINISHED regardless of what
+  // the API reports — guards against stale status values on upcoming matches.
+  if (!isPastMatch(match)) return 'UPCOMING';
   if (match.status === 'LIVE') return 'LIVE';
   if (match.status === 'FINISHED') return 'FINISHED';
-  if (hasMatchScore(match) && isPastMatch(match)) return 'FINISHED';
-  return match.status;
+  if (hasMatchScore(match)) return 'FINISHED';
+  return match.status ?? 'UPCOMING';
 }
 
 export function scoreStatusLabel(match) {
-  if (match.status === 'LIVE') {
+  if (displayStatus(match) === 'LIVE') {
     if (isHalfTime(match)) return 'HT';
     const minute = formatMatchMinute(match.minute);
     return minute ? `Live ${minute}` : 'Live';
@@ -63,7 +66,7 @@ export function scoreText(match) {
 }
 
 export function canShowMatchDetails(match) {
-  return match?.status === 'LIVE' || displayStatus(match) === 'FINISHED' || hasMatchScore(match);
+  return displayStatus(match) === 'LIVE' || displayStatus(match) === 'FINISHED' || hasMatchScore(match);
 }
 
 export function isPredictionLocked(match) {
