@@ -12,7 +12,7 @@ const getStandings = asyncHandler(async (req, res) => {
 
 const getFlagImage = asyncHandler(async (req, res) => {
   const { code } = req.params;
-  const url = `${FIFA_BASE}/picture/flags-sq-1/${encodeURIComponent(code)}`;
+  const url = `${FIFA_BASE}/picture/flags-sq-4/${encodeURIComponent(code)}`;
 
   const upstream = await axios.get(url, {
     responseType: 'stream',

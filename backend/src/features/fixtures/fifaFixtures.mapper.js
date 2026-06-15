@@ -58,7 +58,7 @@ function mapTeam(team) {
     abbreviation: team.Abbreviation,
     countryCode: team.IdCountry,
     flagUrl: team.PictureUrl
-      ? team.PictureUrl.replace('{format}', 'sq').replace('{size}', '1')
+      ? team.PictureUrl.replace('{format}', 'sq').replace('{size}', '4')
       : null,
     score: team.Score ?? null,
     penaltyScore: null,
