@@ -32,6 +32,11 @@ export function PredictionsPage({ onViewStats }) {
   const [savingMatchId, setSavingMatchId] = useState(null);
   const [savingWinner, setSavingWinner] = useState(false);
   const [notice, setNotice] = useState(null);
+  // Starts false; flips to true after the first successful private data fetch.
+  // Derived `privateLoading` is true only when authed but data not yet ready,
+  // so the fixture panel never renders cards in the wrong empty state.
+  const [privateReady, setPrivateReady] = useState(false);
+  const privateLoading = isAuthed && !privateReady;
 
   const { drafts, updateDraft } = usePredictionDrafts(predictions);
   const { query, setQuery, statusFilter, setStatusFilter, visibleFixtures } = usePredictionFilters(fixtures);
@@ -48,6 +53,7 @@ export function PredictionsPage({ onViewStats }) {
     setPredictions([]);
     setPoints([]);
     setWinnerPick('');
+    setPrivateReady(false);
   }, [isAuthed]);
 
   useEffect(() => {
@@ -86,6 +92,7 @@ export function PredictionsPage({ onViewStats }) {
     ]);
     setPredictions(predData.predictions || []);
     setPoints(pointData.points || []);
+    setPrivateReady(true);
   }, [token]);
 
   // Fetch private data on mount and when auth state changes
@@ -247,7 +254,7 @@ export function PredictionsPage({ onViewStats }) {
             />
 
             <PredictionFixturesPanel
-              loading={publicLoading}
+              loading={publicLoading || privateLoading}
               visibleFixtures={visibleFixtures}
               query={query}
               setQuery={setQuery}
