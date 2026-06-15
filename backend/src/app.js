@@ -10,7 +10,9 @@ const authRoutes = require('./features/auth/auth.routes');
 const predictionsRoutes = require('./features/predictions/predictions.routes');
 const scoringRoutes = require('./features/scoring/scoring.routes');
 const leaderboardRoutes = require('./features/leaderboard/leaderboard.routes');
-const adminRoutes = require('./features/admin/admin.routes');
+const adminRoutes     = require('./features/admin/admin.routes');
+const standingsRoutes = require('./features/standings/standings.routes');
+const knockoutRoutes = require('./features/knockout/knockout.routes');
 
 const notFound = require('./shared/middleware/notFound');
 const errorHandler = require('./shared/middleware/errorHandler');
@@ -26,6 +28,8 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 // FIFA proxy routes
 app.use('/fixtures', fixturesRoutes);
 app.use('/fixtures/:matchId/stats', matchStatsRoutes);
+app.use('/standings', standingsRoutes);
+app.use('/knockout', knockoutRoutes);
 
 // Game routes
 app.use('/auth', authRoutes);
