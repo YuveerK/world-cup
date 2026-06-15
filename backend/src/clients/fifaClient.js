@@ -6,6 +6,7 @@ const {
   FDH_BASE,
   COMPETITION,
   SEASON,
+  FIRST_STAGE,
   FIFA_TIMEOUT_MS,
   FDH_TIMEOUT_MS,
 } = require('../config/constants');
@@ -41,4 +42,11 @@ function getTeamStats(ifesId) {
   return rawGet(`${FDH_BASE}/stats/match/${ifesId}/teams.json`, FDH_TIMEOUT_MS);
 }
 
-module.exports = { getCalendar, getLive, getTimeline, getTeamStats };
+function getStandings() {
+  return rawGet(
+    `${FIFA_BASE}/calendar/${COMPETITION}/${SEASON}/${FIRST_STAGE}/standing?language=en&count=200`,
+    FIFA_TIMEOUT_MS
+  );
+}
+
+module.exports = { getCalendar, getLive, getTimeline, getTeamStats, getStandings };

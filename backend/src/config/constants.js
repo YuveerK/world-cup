@@ -5,6 +5,7 @@ module.exports = {
   FDH_BASE: 'https://fdh-api.fifa.com/v1',
   COMPETITION: '17',
   SEASON: '285023',
+  FIRST_STAGE: '289273',   // Group Stage
   FIFA_TIMEOUT_MS: 10_000,
   FDH_TIMEOUT_MS: 8_000,
   FIXTURES_CACHE_TTL_MS: 60_000,
