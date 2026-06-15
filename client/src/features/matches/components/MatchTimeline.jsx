@@ -1,4 +1,4 @@
-import { Activity, ArrowLeftRight } from 'lucide-react';
+import { Activity, ArrowLeftRight, Droplets } from 'lucide-react';
 
 // Parse "9'", "45'+2'", 67, etc. for fallback half-boundary checks.
 function parseMinuteParts(raw) {
@@ -36,6 +36,7 @@ function categorize(type = '', typeCode) {
   if (code === 57 || t.includes('prevention') || t.includes('save')) return 'save';
   if (code === 15 || t.includes('offside')) return 'offside';
   if (code === 1 || t.includes('assist')) return 'assist';
+  if (code === 83 || t.includes('hydration') || t.includes('water break') || t.includes('cooling break')) return 'hydration';
   if (code === 7 || t.includes('start') || t.includes('kick off')) return 'period';
   if (code === 8 || code === 26 || t.includes('end time') || t.includes('match end')) return 'period';
   if (code === 78 || t.includes('resume')) return 'period';
@@ -55,11 +56,12 @@ const CAT_LABEL = {
   save: 'Save',
   offside: 'Offside',
   assist: 'Assist',
+  hydration: 'Hydration break',
   period: 'Period',
   event: 'Event',
 };
 
-const HIDDEN_TYPES = new Set([79, 83]);
+const HIDDEN_TYPES = new Set([79]);
 
 const Ball = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -113,6 +115,12 @@ function Marker({ cat }) {
       return <span className="grid h-6 w-6 place-items-center rounded-full bg-slate-600 text-[10px] font-black text-white ring-2 ring-white">O</span>;
     case 'assist':
       return <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-500 text-[10px] font-black text-white ring-2 ring-white">A</span>;
+    case 'hydration':
+      return (
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-sky-400 text-white ring-2 ring-white">
+          <Droplets className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
+      );
     case 'period':
       return <span className="grid h-6 w-6 place-items-center rounded-full bg-slate-200 text-[10px] font-black text-slate-600 ring-2 ring-white">T</span>;
     default:
@@ -302,6 +310,7 @@ export function MatchTimeline({ events = [], homeName, awayName }) {
           <LegendItem swatch={<span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-cyan-500 text-white"><ArrowLeftRight className="h-2.5 w-2.5" aria-hidden="true" /></span>} label="Sub" />
           <LegendItem swatch={<span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-slate-600 text-[8px] font-black text-white">O</span>} label="Offside" />
           <LegendItem swatch={<span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-teal-500 text-[8px] font-black text-white">A</span>} label="Assist" />
+          <LegendItem swatch={<span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-sky-400 text-white"><Droplets className="h-2.5 w-2.5" /></span>} label="Hydration" />
           <LegendItem swatch={<span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-slate-200 text-[8px] font-black text-slate-600">T</span>} label="Period" />
         </div>
       </div>
@@ -336,7 +345,7 @@ export function MatchTimeline({ events = [], homeName, awayName }) {
           </div>
 
           <ol className="grid gap-2">
-            {displayEvents.map((event, index) => (
+            {[...displayEvents].reverse().map((event, index) => (
               <EventRow
                 key={event.eventId || `${event.minute}-${event.type}-${index}`}
                 event={event}

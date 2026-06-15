@@ -141,7 +141,6 @@ function SheetContent({ match, rows, currentUser, actualResult, loading, error }
     <MatchPredictionsTable
       rows={rows}
       currentUser={currentUser}
-      matchDate={match?.date}
       actualResult={actualResult}
     />
   );

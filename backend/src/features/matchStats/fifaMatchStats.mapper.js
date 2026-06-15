@@ -21,11 +21,11 @@ const EVENT_TYPE = {
   57: 'Goal Prevention',
   78: 'Resume',
   79: 'Coin Toss',
-  83: 'Delay',
+  83: 'Hydration Break',
 };
 
 // Event types that add no analytical value to the timeline display
-const SKIP_TYPES = new Set([79, 83]);
+const SKIP_TYPES = new Set([79]);
 
 function mapPlayer(p) {
   return {

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Check, Clock } from 'lucide-react';
 import { roundPoints } from '@/lib/utils/number';
 import { outcomeLabel } from '@/features/matches/utils/matchFormatters';
-import { timeBeforeKickoff } from '../utils/predictionTiming';
+import { formatPlacedAt } from '../utils/predictionTiming';
 import {
   getPredictionRowTotal,
   getPredictionUsername,
@@ -14,7 +14,7 @@ import {
 
 const EMPTY_SCORE = '\u2014';
 
-export function MatchPredictionsTable({ rows = [], currentUser, matchDate, actualResult }) {
+export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) {
   const sorted = useMemo(() => sortPredictionRowsByPoints(rows), [rows]);
   const submissionStats = useMemo(() => getSubmissionStats(rows), [rows]);
   const hasScored = hasScoredPredictionRows(rows);
@@ -22,18 +22,16 @@ export function MatchPredictionsTable({ rows = [], currentUser, matchDate, actua
   return (
     <div className="space-y-3">
       {actualResult && <ActualResultBanner actualResult={actualResult} />}
-      {submissionStats && <SubmissionStats stats={submissionStats} matchDate={matchDate} />}
+      {submissionStats && <SubmissionStats stats={submissionStats} />}
       <MobilePredictionCards
         rows={sorted}
         currentUser={currentUser}
-        matchDate={matchDate}
         actualResult={actualResult}
         hasScored={hasScored}
       />
       <DesktopPredictionsTable
         rows={sorted}
         currentUser={currentUser}
-        matchDate={matchDate}
         actualResult={actualResult}
         hasScored={hasScored}
       />
@@ -65,11 +63,11 @@ function ActualResultBanner({ actualResult }) {
   );
 }
 
-function SubmissionStats({ stats, matchDate }) {
+function SubmissionStats({ stats }) {
   const items = [
-    { label: 'Earliest', value: timeBeforeKickoff(stats.earliest, matchDate) },
-    { label: 'Latest', value: timeBeforeKickoff(stats.latest, matchDate) },
-    { label: 'Average', value: timeBeforeKickoff(stats.avg, matchDate) },
+    { label: 'Earliest', value: formatPlacedAt(stats.earliest) },
+    { label: 'Latest', value: formatPlacedAt(stats.latest) },
+    { label: 'Average', value: formatPlacedAt(stats.avg) },
   ];
 
   return (
@@ -84,7 +82,7 @@ function SubmissionStats({ stats, matchDate }) {
   );
 }
 
-function MobilePredictionCards({ rows, currentUser, matchDate, actualResult, hasScored }) {
+function MobilePredictionCards({ rows, currentUser, actualResult, hasScored }) {
   return (
     <div className="space-y-2 sm:hidden">
       {rows.map((row, index) => (
@@ -93,7 +91,6 @@ function MobilePredictionCards({ rows, currentUser, matchDate, actualResult, has
           row={row}
           rank={index + 1}
           currentUser={currentUser}
-          matchDate={matchDate}
           actualResult={actualResult}
           hasScored={hasScored}
         />
@@ -102,11 +99,11 @@ function MobilePredictionCards({ rows, currentUser, matchDate, actualResult, has
   );
 }
 
-function MobilePredictionCard({ row, rank, currentUser, matchDate, actualResult, hasScored }) {
+function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
-  const submitted = timeBeforeKickoff(row.submitted_at, matchDate);
+  const submitted = formatPlacedAt(row.submitted_at);
   const htEarned = (row.ht_pts || 0) > 0;
   const ftEarned = (row.ft_pts || 0) > 0;
   const outEarned = (row.outcome_pts || 0) > 0;
@@ -205,7 +202,7 @@ function MobileScoreCard({ label, value, earned, hasScored, actual, points, hasP
   );
 }
 
-function DesktopPredictionsTable({ rows, currentUser, matchDate, actualResult, hasScored }) {
+function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored }) {
   return (
     <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:block">
       <div className="overflow-x-auto">
@@ -230,7 +227,7 @@ function DesktopPredictionsTable({ rows, currentUser, matchDate, actualResult, h
               <th className="px-3 py-2.5 text-center">FT pts</th>
               <th className="px-3 py-2.5 text-center">Cls</th>
               <th className="px-3 py-2.5 text-center">Out</th>
-              <th className="px-3 py-2.5 text-center">Submitted</th>
+              <th className="px-3 py-2.5 text-center">Placed at</th>
               <th className="px-3 py-2.5 text-right">Total</th>
             </tr>
           </thead>
@@ -241,7 +238,6 @@ function DesktopPredictionsTable({ rows, currentUser, matchDate, actualResult, h
                 row={row}
                 rank={index + 1}
                 currentUser={currentUser}
-                matchDate={matchDate}
                 actualResult={actualResult}
                 hasScored={hasScored}
               />
@@ -253,7 +249,7 @@ function DesktopPredictionsTable({ rows, currentUser, matchDate, actualResult, h
   );
 }
 
-function DesktopPredictionRow({ row, rank, currentUser, matchDate, actualResult, hasScored }) {
+function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
@@ -294,7 +290,7 @@ function DesktopPredictionRow({ row, rank, currentUser, matchDate, actualResult,
       <td className="px-3 py-2.5 text-center text-xs tabular-nums">{pointsCell(roundPoints(row.closest_pts || 0))}</td>
       <td className="px-3 py-2.5 text-center text-xs tabular-nums">{pointsCell(row.outcome_pts || 0)}</td>
       <td className="whitespace-nowrap px-3 py-2.5 text-center text-[11px] text-slate-500">
-        {timeBeforeKickoff(row.submitted_at, matchDate) ?? '-'}
+        {formatPlacedAt(row.submitted_at) ?? '-'}
       </td>
       <td className="px-3 py-2.5 text-right font-black tabular-nums text-slate-950">{total}</td>
     </tr>
