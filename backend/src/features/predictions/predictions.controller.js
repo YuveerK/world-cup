@@ -27,8 +27,8 @@ const getMyPoints = asyncHandler(async (req, res) => {
 });
 
 const getMatchPredictions = asyncHandler(async (req, res) => {
-  const predictions = await svc.getPredictionsForMatch(req.params.matchId);
-  res.json({ predictions });
+  const { predictions, actualResult } = await svc.getPredictionsForMatch(req.params.matchId);
+  res.json({ predictions, actualResult });
 });
 
 module.exports = { submit, getMyPredictions, getMyPoints, getMatchPredictions };

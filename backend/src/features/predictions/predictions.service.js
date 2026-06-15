@@ -43,7 +43,8 @@ async function getMyPoints(userId) {
 }
 
 async function getPredictionsForMatch(matchId) {
-  return repo.findByMatch(matchId);
+  const { predictions, actualResult } = await repo.findByMatch(matchId);
+  return { predictions, actualResult };
 }
 
 module.exports = { savePrediction, getMyPredictions, getMyPoints, getPredictionsForMatch };
