@@ -6,6 +6,8 @@ export function usePredictionDrafts(predictions) {
 
   useEffect(() => {
     setDrafts(current => {
+      // Empty predictions means logged-out or account switch — wipe all drafts
+      if (!predictions.length) return {};
       const next = { ...current };
       predictions.forEach(p => {
         const id = String(p.match_id);

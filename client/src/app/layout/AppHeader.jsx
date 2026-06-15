@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LogOut, Menu, Trophy, X } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '@/app/providers/AuthContext';
 
 // Core navigation — always visible to authenticated users
 const CORE_NAV = [
   { to: '/', label: 'Predictions', end: true },
   { to: '/leaderboard', label: 'Leaderboard' },
+  { to: '/standings', label: 'Standings' },
+  { to: '/knockout', label: 'Knockout' },
   { to: '/reports', label: 'Reports' },
 ];
 
@@ -35,7 +38,8 @@ const drawerLinkClass = ({ isActive }) =>
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
   ].join(' ');
 
-export function AppHeader({ isAuthed, isAdmin, onLogout }) {
+export function AppHeader() {
+  const { isAuthed, isRestoringSession, isAdmin, logout: onLogout, user } = useAuth();
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
@@ -53,22 +57,35 @@ export function AppHeader({ isAuthed, isAdmin, onLogout }) {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-[0_1px_4px_0_rgba(0,0,0,0.04)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
 
-          {/* ── Brand ── */}
+          {/* ── Brand / greeting ── */}
           <div className="flex shrink-0 items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 to-yellow-500 text-blue-950 shadow-[0_8px_20px_-6px_rgba(250,204,21,0.75)] ring-1 ring-black/5 sm:h-11 sm:w-11">
-              <Trophy className="h-5 w-5 sm:h-[22px] sm:w-[22px]" aria-hidden="true" />
-            </div>
-            <div className="hidden leading-tight sm:block">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">
-                World Cup 2026
-              </p>
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-                Prediction League
-              </h1>
-            </div>
+            {user ? (
+              <div className="leading-tight">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">
+                  World Cup 2026
+                </p>
+                <p className="text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
+                  Welcome, {user.username}!
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 to-yellow-500 text-blue-950 shadow-[0_8px_20px_-6px_rgba(250,204,21,0.75)] ring-1 ring-black/5 sm:h-11 sm:w-11">
+                  <Trophy className="h-5 w-5 sm:h-[22px] sm:w-[22px]" aria-hidden="true" />
+                </div>
+                <div className="hidden leading-tight sm:block">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">
+                    World Cup 2026
+                  </p>
+                  <h1 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
+                    Prediction League
+                  </h1>
+                </div>
+              </>
+            )}
           </div>
 
-          {isAuthed && (
+          {(isAuthed || isRestoringSession) && (
             <>
               {/* ── Desktop navigation ── */}
               <nav
@@ -133,7 +150,7 @@ export function AppHeader({ isAuthed, isAdmin, onLogout }) {
       </header>
 
       {/* ── Mobile side drawer (portalled to body) ── */}
-      {isAuthed && createPortal(
+      {(isAuthed || isRestoringSession) && createPortal(
         <>
           {/* Backdrop */}
           <div
@@ -157,15 +174,26 @@ export function AppHeader({ isAuthed, isAdmin, onLogout }) {
             {/* Drawer header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-300 to-yellow-500 text-blue-950 shadow-[0_4px_12px_-4px_rgba(250,204,21,0.8)]">
-                  <Trophy className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <div className="leading-tight">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">
-                    World Cup 2026
-                  </p>
-                  <p className="text-sm font-bold text-slate-900">Prediction League</p>
-                </div>
+                {user ? (
+                  <div className="leading-tight">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">
+                      World Cup 2026
+                    </p>
+                    <p className="text-sm font-bold text-slate-900">Welcome, {user.username}!</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-300 to-yellow-500 text-blue-950 shadow-[0_4px_12px_-4px_rgba(250,204,21,0.8)]">
+                      <Trophy className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">
+                        World Cup 2026
+                      </p>
+                      <p className="text-sm font-bold text-slate-900">Prediction League</p>
+                    </div>
+                  </>
+                )}
               </div>
               <button
                 type="button"

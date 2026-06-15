@@ -1,7 +1,9 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Award, BarChart2, Check, CheckCircle2, ChevronDown, Clock, Copy, Crown, Eye, FileDown, Lock, Loader2, Medal, Printer, RefreshCw, Star, Target, TrendingDown, TrendingUp, Trophy, Users, X, XCircle, Zap } from 'lucide-react';
-import { apiRequest } from '@/lib/api/apiClient';
+import { apiRequest } from '@/api';
+import { useAuth } from '@/app/providers/AuthContext';
+import { useAppData } from '@/app/providers/AppDataContext';
 import {
   Bar, BarChart, CartesianGrid, Cell,
   Line, LineChart,
@@ -1075,7 +1077,9 @@ function StandingsRow({ row, isCurrentUser, isSelected, onSelect }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading, refreshAll, token }) {
+export function MatchdayReportPage() {
+  const { user: currentUser, token } = useAuth();
+  const { leaderboard, fixtures, loading, error, refresh: refreshAll } = useAppData();
   const matchdays = useMemo(() => groupFixturesByMatchday(fixtures), [fixtures]);
   const defaultKey = useMemo(() => {
     const active = [...matchdays].reverse().find(isActiveReportDay);
@@ -1174,7 +1178,12 @@ export function MatchdayReportPage({ leaderboard, fixtures, currentUser, loading
 
   if (loading) return <LoadingPanel label="Loading matchday report" />;
   if (!leaderboard.length || !matchdays.length) {
-    return <EmptyState title="No report data yet" detail="Reports will appear after fixtures and player predictions are available." />;
+    return (
+      <EmptyState
+        title={error ? 'Could not load report data' : 'No report data yet'}
+        detail={error || 'Reports will appear after fixtures and player predictions are available.'}
+      />
+    );
   }
 
   return (
