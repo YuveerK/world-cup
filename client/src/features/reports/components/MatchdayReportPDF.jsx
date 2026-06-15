@@ -22,31 +22,38 @@ import {
 // ─── Design Tokens — Premium Light Mode ───────────────────────────────────────
 
 const C = {
-  // Canvas — soft blue-gray, not clinical white
-  canvas: "#F2F5FA",
-  canvasSub: "#EBF0F6",
+  // Canvas
+  canvas: "#F1F5F9",
+  canvasSub: "#E2E8F0",
 
-  // Surfaces — pure white cards lift off the canvas
+  // Surfaces
   white: "#FFFFFF",
   surfaceRaised: "#F8FAFD",
 
-  // Borders — ultra-subtle definition
+  // Borders
   border: "#DDE4ED",
   borderLight: "#EBF0F6",
 
-  // Champion Gold — #1 only
+  // ── App primary: Blue (matches web blue-600) ──
+  blue: "#2563EB",
+  blueVivid: "#3B82F6",
+  blueWash: "#EFF6FF",
+  blueBorder: "#DBEAFE",
+  blueDeep: "#1D4ED8",
+
+  // Champion Gold — rank #1 ONLY
   gold: "#C8860A",
   goldVivid: "#F0A020",
   goldWash: "#FFFBF0",
   goldBorder: "#EDD090",
 
-  // Silver — #2
+  // Silver — rank #2
   silver: "#5E7080",
   silverVivid: "#8898B0",
   silverWash: "#EFF3F8",
   silverBorder: "#C0CDD8",
 
-  // Bronze — #3
+  // Bronze — rank #3
   bronze: "#966030",
   bronzeVivid: "#B87040",
   bronzeWash: "#FDF5EC",
@@ -58,6 +65,9 @@ const C = {
   emeraldWash: "#EDFAF5",
   emeraldBorder: "#A0DEC4",
 
+  // Live status (matches web rose-600 / red-600)
+  live: "#DC2626",
+
   // Text hierarchy
   ink: "#0C1929",
   textPrimary: "#1A2B3D",
@@ -65,7 +75,7 @@ const C = {
   textMuted: "#7E96AE",
   textDim: "#B8C8D8",
 
-  // Category accent colors — vibrant on white
+  // Category accent colors — match web: amber/blue/violet/teal/rose
   htC: "#A86000",
   htBg: "#FFFBEB",
   ftC: "#1D50C0",
@@ -94,13 +104,13 @@ const S = StyleSheet.create({
   pageHeaderEyebrow: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
-    color: C.gold,
+    color: C.blue,
     letterSpacing: 2.5,
     marginBottom: 4,
   },
   pageHeaderTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", color: C.ink },
   pageHeaderSub: { fontSize: 8.5, color: C.textMuted, marginTop: 3 },
-  pageGoldLine: { height: 3, backgroundColor: C.goldVivid },
+  pageGoldLine: { height: 3, backgroundColor: C.blue },
   pageGrayLine: { height: 1, backgroundColor: C.border },
   pageBody: {
     paddingHorizontal: 24,
@@ -234,7 +244,7 @@ const S = StyleSheet.create({
   playerEyebrow: {
     fontSize: 7,
     fontFamily: "Helvetica-Bold",
-    color: C.gold,
+    color: C.blue,
     marginBottom: 3,
     letterSpacing: 1.8,
   },
@@ -245,21 +255,21 @@ const S = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 8,
     alignItems: "center",
-    backgroundColor: C.goldWash,
+    backgroundColor: C.blueWash,
     borderWidth: 1,
-    borderColor: C.goldBorder,
+    borderColor: C.blueBorder,
   },
   playerTotalLabel: {
     fontSize: 6,
     fontFamily: "Helvetica-Bold",
-    color: C.gold,
+    color: C.blue,
     letterSpacing: 1.8,
     marginBottom: 2,
   },
   playerTotalValue: {
     fontSize: 26,
     fontFamily: "Helvetica-Bold",
-    color: C.gold,
+    color: C.blue,
   },
   playerTotalSub: { fontSize: 6, color: C.textMuted, marginTop: 1 },
 
@@ -314,7 +324,7 @@ const S = StyleSheet.create({
   matchdayNum: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
-    color: C.goldVivid,
+    color: C.blue,
     marginRight: 10,
     letterSpacing: 1.8,
   },
@@ -553,9 +563,9 @@ function MatchRowPDF({ match, entry }) {
     ? <Image src={away.flagUrl} style={S.matchFlag} />
     : <View style={S.matchAbbr}><Text style={S.matchAbbrText}>{away?.abbreviation || "??"}</Text></View>;
 
-  const statusColor  = status === "LIVE" ? C.emeraldVivid : C.textMuted;
-  const ptsBadgeBg   = scored ? "#2B5CE6" : C.borderLight;
-  const ptsBadgeTx   = scored ? C.white   : C.textDim;
+  const statusColor  = status === "LIVE" ? C.live : C.textMuted;
+  const ptsBadgeBg   = scored ? C.blue : C.borderLight;
+  const ptsBadgeTx   = scored ? C.white : C.textDim;
   const matchDateStr = match?.date ? formatDate(match.date) : "";
 
   return (
@@ -702,7 +712,7 @@ function MatchdayBlock({ player, matchday, mdIndex, runningTotal }) {
         paddingTop: 8, paddingBottom: 3,
         marginTop: mdIndex === 0 ? 0 : 4,
       }}>
-        <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.goldVivid, letterSpacing: 1.5, marginRight: 10 }}>
+        <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.blue, letterSpacing: 1.5, marginRight: 10 }}>
           MATCHDAY {mdIndex + 1}
         </Text>
         <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
@@ -869,72 +879,72 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
             cy={210}
             r={200}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={1.5}
-            opacity={0.14}
+            opacity={0.1}
           />
           <Circle
             cx={210}
             cy={210}
             r={155}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={1}
-            opacity={0.09}
+            opacity={0.07}
           />
           <Circle
             cx={210}
             cy={210}
             r={108}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.7}
-            opacity={0.07}
+            opacity={0.05}
           />
           <Circle
             cx={210}
             cy={210}
             r={62}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.05}
+            opacity={0.04}
           />
           <Line
             x1={210}
             y1={10}
             x2={210}
             y2={410}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.7}
-            opacity={0.09}
+            opacity={0.07}
           />
           <Line
             x1={10}
             y1={210}
             x2={410}
             y2={210}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.7}
-            opacity={0.09}
+            opacity={0.07}
           />
           <Line
             x1={60}
             y1={60}
             x2={360}
             y2={360}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.06}
+            opacity={0.05}
           />
           <Line
             x1={360}
             y1={60}
             x2={60}
             y2={360}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.06}
+            opacity={0.05}
           />
         </Svg>
       </View>
@@ -946,41 +956,41 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
             cy={130}
             r={120}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={1}
-            opacity={0.08}
+            opacity={0.07}
           />
           <Circle
             cx={130}
             cy={130}
             r={82}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.7}
-            opacity={0.06}
+            opacity={0.05}
           />
           <Line
             x1={130}
             y1={10}
             x2={130}
             y2={250}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.06}
+            opacity={0.05}
           />
           <Line
             x1={10}
             y1={130}
             x2={250}
             y2={130}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.06}
+            opacity={0.05}
           />
         </Svg>
       </View>
 
-      <View style={{ height: 5, backgroundColor: C.goldVivid }} />
+      <View style={{ height: 5, backgroundColor: C.blue }} />
 
       <View
         style={{
@@ -996,7 +1006,7 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
             style={{
               fontSize: 10,
               fontFamily: "Helvetica-Bold",
-              color: C.gold,
+              color: C.blue,
               letterSpacing: 5,
               marginBottom: 20,
             }}
@@ -1040,7 +1050,7 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
             style={{
               width: 72,
               height: 4,
-              backgroundColor: C.goldVivid,
+              backgroundColor: C.blue,
               marginBottom: 24,
             }}
           />
@@ -1054,7 +1064,7 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
                 viewBox="0 0 24 24"
                 style={{ marginRight: 5 }}
               >
-                <Path d={STAR} fill={C.gold} />
+                <Path d={STAR} fill={C.blue} />
               </Svg>
             ))}
           </View>
@@ -1115,7 +1125,7 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
 
       <View
         style={{
-          backgroundColor: C.goldVivid,
+          backgroundColor: C.blue,
           paddingHorizontal: 48,
           paddingVertical: 16,
           flexDirection: "row",
@@ -1261,7 +1271,7 @@ function CoverPage({ playerCount, matchdayCount, dateRange }) {
         </View>
       </View>
 
-      <View style={{ height: 5, backgroundColor: C.goldVivid }} />
+      <View style={{ height: 5, backgroundColor: C.blue }} />
     </Page>
   );
 }
@@ -1288,36 +1298,36 @@ function StandingsPage({ rows }) {
             cy={90}
             r={80}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.8}
-            opacity={0.1}
+            opacity={0.09}
           />
           <Circle
             cx={90}
             cy={90}
             r={50}
             fill="none"
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.6}
-            opacity={0.07}
+            opacity={0.06}
           />
           <Line
             x1={90}
             y1={10}
             x2={90}
             y2={170}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.07}
+            opacity={0.06}
           />
           <Line
             x1={10}
             y1={90}
             x2={170}
             y2={90}
-            stroke={C.goldVivid}
+            stroke={C.blue}
             strokeWidth={0.5}
-            opacity={0.07}
+            opacity={0.06}
           />
         </Svg>
       </View>
@@ -1417,10 +1427,10 @@ function StandingsPage({ rows }) {
           const rank = row.selectedRank || row.rank;
           const total = roundPoints(row.total || 0);
           const accentColor =
-            rank === 1 ? C.goldVivid : rank === 2 ? C.silverVivid : rank === 3 ? C.bronzeVivid : C.borderLight;
+            rank === 1 ? C.goldVivid : rank === 2 ? C.silverVivid : rank === 3 ? C.bronzeVivid : C.blueVivid;
           const badgeBg =
-            rank === 1 ? C.goldVivid : rank === 2 ? C.silverVivid : rank === 3 ? C.bronzeVivid : C.canvas;
-          const badgeTx = rank <= 3 ? C.white : C.textMuted;
+            rank === 1 ? C.goldVivid : rank === 2 ? C.silverVivid : rank === 3 ? C.bronzeVivid : C.blueWash;
+          const badgeTx = rank <= 3 ? C.white : C.blue;
           const ptsColor =
             rank === 1 ? C.gold : rank === 2 ? C.silver : rank === 3 ? C.bronze : C.textPrimary;
 
@@ -1518,7 +1528,7 @@ function PlayerPage({ player, scoredMatchdays, allMatchdays }) {
                       ? C.silverVivid
                       : rank === 3
                         ? C.bronzeVivid
-                        : C.canvas,
+                        : C.blueWash,
               },
             ]}
           >
@@ -1526,7 +1536,7 @@ function PlayerPage({ player, scoredMatchdays, allMatchdays }) {
               style={{
                 fontSize: 15,
                 fontFamily: "Helvetica-Bold",
-                color: rank <= 3 ? C.white : C.textMuted,
+                color: rank <= 3 ? C.white : C.blue,
               }}
             >
               #{rank}
