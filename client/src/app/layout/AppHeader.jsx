@@ -55,7 +55,9 @@ export function AppHeader({ isAuthed, isAdmin, onLogout }) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const navItems = isAdmin ? [...NAV_ITEMS, { to: '/admin', label: 'Admin' }] : NAV_ITEMS;
+  const navItems = isAdmin
+    ? [...NAV_ITEMS, { to: '/admin', label: 'Admin' }, { to: '/dev/cards', label: 'Preview' }]
+    : NAV_ITEMS;
 
   return (
     <>

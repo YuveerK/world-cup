@@ -17,6 +17,7 @@ import { isRealTeam } from '@/features/matches/utils/matchFormatters';
 import { teamName } from '@/features/matches/utils/matchFormatters';
 import { parseScore } from '@/lib/utils/number';
 import { getStoredToken, storeToken, clearStoredToken } from '@/lib/storage/tokenStorage';
+import { CardPreviewPage } from '@/dev/CardPreviewPage';
 
 function App() {
   const [token, setToken] = useState(getStoredToken);
@@ -607,6 +608,13 @@ function App() {
             )
           }
         />
+        <Route
+          path="/dev/cards"
+          element={
+            !isAuthed || !isAdmin ? <Navigate to="/" replace /> : <CardPreviewPage />
+          }
+        />
+
         <Route
           path="/"
           element={
