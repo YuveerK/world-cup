@@ -13,3 +13,11 @@ export async function getMyPoints(token) {
 export async function savePrediction(matchId, body, token) {
   return apiRequest(`/predictions/${matchId}`, { method: 'POST', token, body });
 }
+
+export async function getPredictionsForMatch(matchId, token) {
+  const data = await apiRequest(`/predictions/${matchId}/all`, { token });
+  return {
+    rows: Array.isArray(data) ? data : (data?.predictions ?? []),
+    actualResult: data?.actualResult ?? null,
+  };
+}
