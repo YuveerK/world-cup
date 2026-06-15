@@ -4,7 +4,7 @@ export function ScoreInputGroup({ label, homeValue, awayValue, onHome, onAway, r
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}{required && <span className="ml-1 text-rose-400">*</span>}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <input
           className="score-field"
           type="number"
