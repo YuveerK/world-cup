@@ -2,6 +2,7 @@ import {
   Activity,
   CalendarDays,
   CheckCircle2,
+  Clock,
   Eye,
   Loader2,
   Save,
@@ -22,6 +23,24 @@ import {
   statusPillLabel,
 } from "@/features/matches/utils/matchStatus";
 import { outcomeLabel } from "@/features/matches/utils/matchFormatters";
+
+function formatCountdown(matchDate) {
+  if (!matchDate) return null;
+  const diffMs = new Date(matchDate) - Date.now();
+  if (diffMs <= 0 || diffMs > 24 * 60 * 60 * 1000) return null;
+  const totalMins = Math.floor(diffMs / 60000);
+  if (totalMins < 60) return { short: `${totalMins}m`, label: 'Lock in now!', level: 'red' };
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  const short = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  return { short, label: `${short} to go`, level: hours < 6 ? 'amber' : 'slate' };
+}
+
+function tzAbbr(date) {
+  return new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+    .formatToParts(date ? new Date(date) : new Date())
+    .find((p) => p.type === 'timeZoneName')?.value ?? '';
+}
 
 function numEq(a, b) {
   const na = a == null || a === "" ? null : Number(a);
@@ -98,7 +117,7 @@ export function PredictionCard({
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
           <span className="flex shrink-0 items-center gap-1.5 font-medium">
             <CalendarDays className="h-3 w-3" aria-hidden="true" />
-            {formatDate(match.date)} · {formatTime(match.date)}
+            {formatDate(match.date)} · {formatTime(match.date)} <span className="text-slate-400">{tzAbbr(match.date)}</span>
           </span>
           {match.group && (
             <span className="shrink-0 font-semibold">{match.group}</span>
@@ -157,13 +176,31 @@ export function PredictionCard({
               )}
             </div>
           ) : (
-            <div className="text-center">
+            <div className="flex flex-col items-center gap-1.5">
               <p className="text-xl font-black uppercase leading-none text-slate-300 sm:text-2xl">
                 vs
               </p>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-widest text-slate-400">
-                {formatTime(match.date)}
-              </p>
+              {(() => {
+                const cd = !hasPrediction ? formatCountdown(match.date) : null;
+                if (cd) {
+                  const chip = {
+                    red:   'bg-red-100 text-red-700',
+                    amber: 'bg-amber-100 text-amber-700',
+                    slate: 'bg-slate-100 text-slate-500',
+                  };
+                  return (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${chip[cd.level]}`}>
+                      <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                      {formatTime(match.date)} · {cd.label}
+                    </span>
+                  );
+                }
+                return (
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                    {formatTime(match.date)}
+                  </p>
+                );
+              })()}
             </div>
           )}
           {(canShowMatchDetails(match) ||

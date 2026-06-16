@@ -18,7 +18,7 @@ import { Flag } from '@/features/matches/components/Flag';
 import { displayStatus, hasMatchScore, scoreText } from '@/features/matches/utils/matchStatus';
 import { matchTitle, outcomeLabel, teamName } from '@/features/matches/utils/matchFormatters';
 import { predictionText } from '@/features/predictions/utils/predictionDisplay';
-import { dayKeyOf, formatDate, formatDayHeading } from '@/lib/date/index';
+import { dayKeyOf, formatDate, formatDayHeading, formatTime } from '@/lib/date/index';
 import { roundPoints } from '@/lib/utils/number';
 
 // ─── Data logic ────────────────────────────────────────────────────────────────
@@ -787,7 +787,7 @@ function PredictionsTable({ rows, currentUser, matchDate, actualResult }) {
                     <td className="px-3 py-2.5 text-center text-xs tabular-nums">{ptsCell(roundPoints(row.closest_pts || 0))}</td>
                     <td className="px-3 py-2.5 text-center text-xs tabular-nums">{ptsCell(row.outcome_pts || 0)}</td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-center text-[11px] text-slate-500">
-                      {timeBeforeKickoff(row.submitted_at, matchDate) ?? '—'}
+                      {row.submitted_at ? `${formatDate(row.submitted_at)} · ${formatTime(row.submitted_at)}` : '—'}
                     </td>
                     <td className="px-3 py-2.5 text-right font-black tabular-nums text-slate-950">{total}</td>
                   </tr>
