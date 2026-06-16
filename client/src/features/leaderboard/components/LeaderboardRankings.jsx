@@ -4,8 +4,17 @@ import { LeaderboardPlayerRow } from './LeaderboardPlayerRow';
 
 export function LeaderboardRankings({ leaderboard, fixturesById, currentUser, maxPoints, onViewStats }) {
   const [openId, setOpenId] = useState(null);
+  const [closingId, setClosingId] = useState(null);
 
-  const toggle = (id) => setOpenId((prev) => (prev === id ? null : id));
+  const toggle = (id) => {
+    setOpenId((prev) => {
+      if (prev !== null) {
+        setClosingId(prev);
+        setTimeout(() => setClosingId(null), 310);
+      }
+      return prev === id ? null : id;
+    });
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start">
@@ -18,7 +27,7 @@ export function LeaderboardRankings({ leaderboard, fixturesById, currentUser, ma
           const id = row.id || row.username;
           const isCurrentUser = row.username === currentUser?.username;
           return (
-            <div key={id} className={isCurrentUser ? 'sticky bottom-4 z-10 rounded-xl shadow-md' : undefined}>
+            <div key={id} className={isCurrentUser ? `z-10 rounded-xl shadow-md${openId === id || closingId === id ? '' : ' sticky bottom-4'}` : undefined}>
               <LeaderboardPlayerRow
                 row={row}
                 isOpen={openId === id}
