@@ -16,21 +16,21 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const getMe = asyncHandler(async (req, res) => {
-  const result = await authService.getMe(req.user.id, req.user.isAdmin);
+  const result = await authService.getMe(req.user.id);
   res.json(result);
 });
 
 const changeUsername = asyncHandler(async (req, res) => {
   const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
   const result = await authService.changeUsername(
-    req.user.id, username, req.body.currentPassword, req.user.isAdmin
+    req.user.id, username, req.body.currentPassword
   );
   res.json(result);
 });
 
 const changePassword = asyncHandler(async (req, res) => {
   const result = await authService.changePassword(
-    req.user.id, req.body.currentPassword, req.body.newPassword, req.user.isAdmin
+    req.user.id, req.body.currentPassword, req.body.newPassword
   );
   res.json(result);
 });

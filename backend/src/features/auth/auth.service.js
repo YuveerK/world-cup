@@ -39,14 +39,14 @@ async function login(username, password) {
   return { token: makeToken(user, admin), user: toUserDto(user, admin) };
 }
 
-async function getMe(userId, tokenIsAdmin) {
+async function getMe(userId) {
   const user = await usersRepo.findById(userId);
   if (!user) throw new NotFoundError('User not found');
-  const admin = Boolean(tokenIsAdmin || isAdminUser(user));
+  const admin = isAdminUser(user);
   return { user: toUserDto(user, admin) };
 }
 
-async function changeUsername(userId, newUsername, currentPassword, tokenIsAdmin) {
+async function changeUsername(userId, newUsername, currentPassword) {
   const user = await usersRepo.findById(userId);
   if (!user) throw new NotFoundError('User not found');
   const ok = await bcrypt.compare(currentPassword, user.password);
@@ -58,11 +58,11 @@ async function changeUsername(userId, newUsername, currentPassword, tokenIsAdmin
     if (err.code === '23505') throw new ConflictError('Username already taken');
     throw err;
   }
-  const admin = Boolean(tokenIsAdmin || isAdminUser(updated));
+  const admin = isAdminUser(updated);
   return { token: makeToken(updated, admin), user: toUserDto(updated, admin) };
 }
 
-async function changePassword(userId, currentPassword, newPassword, tokenIsAdmin) {
+async function changePassword(userId, currentPassword, newPassword) {
   const user = await usersRepo.findByIdMinimal(userId);
   if (!user) throw new NotFoundError('User not found');
   const ok = await bcrypt.compare(currentPassword, user.password);
@@ -71,7 +71,7 @@ async function changePassword(userId, currentPassword, newPassword, tokenIsAdmin
   await usersRepo.updatePassword(userId, hash);
   // Issue a fresh token so the current session stays valid with the new credentials
   const fullUser = await usersRepo.findById(userId);
-  const admin = Boolean(tokenIsAdmin || isAdminUser(fullUser));
+  const admin = isAdminUser(fullUser);
   return { token: makeToken(fullUser, admin) };
 }
 
