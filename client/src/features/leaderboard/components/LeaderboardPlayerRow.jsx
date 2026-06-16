@@ -5,8 +5,9 @@ import { groupMatchesByDay } from '../utils/leaderboardMatchGroups';
 import { getRankBadgeClass, getRankProgressClass } from '../utils/leaderboardRankStyles';
 import { LeaderboardCategoryStat } from './LeaderboardCategoryStat';
 import { LeaderboardMatchDayGroup } from './LeaderboardMatchDayGroup';
+import { MatchDayHistoryStrip } from './MatchDayHistoryStrip';
 
-export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints, onViewStats, isOpen, onToggle }) {
+export function LeaderboardPlayerRow({ row, fixturesById, currentUser, leaderboard, maxPoints, onViewStats, isOpen, onToggle }) {
   const [contentKey, setContentKey] = useState(0);
   const [openDayKey, setOpenDayKey] = useState(null);
 
@@ -25,10 +26,14 @@ export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border transition ${
-        isCurrentUser ? 'border-blue-200 bg-blue-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+      className={`relative overflow-hidden rounded-xl border bg-white transition ${
+        isCurrentUser ? 'border-blue-300' : 'border-slate-200 hover:border-slate-300'
       }`}
     >
+      {isCurrentUser && (
+        <div className="absolute inset-y-0 left-0 w-1 bg-blue-500" aria-hidden="true" />
+      )}
+
       <button
         type="button"
         className="block w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
@@ -43,7 +48,7 @@ export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-bold text-slate-950">{row.username}</p>
               {isCurrentUser && (
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
+                <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
                   You
                 </span>
               )}
@@ -53,12 +58,12 @@ export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints
               <span className="font-medium text-slate-700">{row.winner || 'Not set'}</span>
             </p>
           </div>
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <p className="text-xl font-black leading-none text-slate-950">{row.total}</p>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">points</p>
           </div>
           <ChevronDown
-            className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+            className={`h-5 w-5 shrink-0 self-center text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
             aria-hidden="true"
           />
         </div>
@@ -77,7 +82,7 @@ export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints
         }`}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="border-t border-slate-200 px-4 py-4" key={contentKey}>
+          <div className="px-4 py-4" key={contentKey}>
             <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
               {LEADERBOARD_CATEGORY_STATS.map(({ label, pointsKey, highlight }, i) => (
                 <div
@@ -89,6 +94,8 @@ export function LeaderboardPlayerRow({ row, fixturesById, currentUser, maxPoints
                 </div>
               ))}
             </div>
+
+            <MatchDayHistoryStrip row={row} leaderboard={leaderboard} fixturesById={fixturesById} />
 
             {dayGroups.length ? (
               <div className="space-y-2">

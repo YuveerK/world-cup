@@ -1,20 +1,34 @@
-import { Crown, Medal, Target } from 'lucide-react';
+import { Crown, Medal, Target, User } from 'lucide-react';
 
-export function LeaderboardSummary({ leader, playerCount, scoredPredictions }) {
+export function LeaderboardSummary({ leader, playerCount, scoredPredictions, currentUser, leaderboard }) {
+  const userRow = currentUser && leaderboard
+    ? leaderboard.find((r) => r.username === currentUser.username)
+    : null;
+
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className={`grid gap-3 ${userRow ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3'}`}>
       <StatTile icon={Crown} tint="amber" label="Leader" value={leader?.username || '-'} />
       <StatTile icon={Medal} tint="blue" label="Players" value={playerCount} />
       <StatTile icon={Target} tint="sky" label="Scored predictions" value={scoredPredictions} />
+      {userRow && (
+        <StatTile
+          icon={User}
+          tint="indigo"
+          label="Your status"
+          value={`${userRow.total} pts`}
+          sub={`Rank #${userRow.rank} · ${userRow.predictions_count} picks`}
+        />
+      )}
     </div>
   );
 }
 
-function StatTile({ icon: Icon, tint, label, value }) {
+function StatTile({ icon: Icon, tint, label, value, sub }) {
   const tints = {
     amber: 'bg-amber-50 text-amber-600',
     blue: 'bg-blue-50 text-blue-600',
     sky: 'bg-sky-50 text-sky-600',
+    indigo: 'bg-indigo-50 text-indigo-600',
   };
 
   return (
@@ -25,6 +39,7 @@ function StatTile({ icon: Icon, tint, label, value }) {
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
         <p className="truncate text-xl font-bold text-slate-950">{value}</p>
+        {sub && <p className="truncate text-xs text-slate-500">{sub}</p>}
       </div>
     </div>
   );

@@ -25,13 +25,15 @@ export function LeaderboardPage({ onViewStats }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <LeaderboardPageHeader onRefresh={refresh} />
 
       <LeaderboardSummary
         leader={leader}
         playerCount={leaderboard.length}
         scoredPredictions={scoredPredictions}
+        currentUser={currentUser}
+        leaderboard={leaderboard}
       />
 
       <LeaderboardRankings

@@ -16,17 +16,20 @@ export function LeaderboardRankings({ leaderboard, fixturesById, currentUser, ma
       <div className="min-w-0 space-y-2">
         {leaderboard.map((row) => {
           const id = row.id || row.username;
+          const isCurrentUser = row.username === currentUser?.username;
           return (
-            <LeaderboardPlayerRow
-              key={id}
-              row={row}
-              isOpen={openId === id}
-              onToggle={() => toggle(id)}
-              fixturesById={fixturesById}
-              currentUser={currentUser}
-              maxPoints={maxPoints}
-              onViewStats={onViewStats}
-            />
+            <div key={id} className={isCurrentUser ? 'sticky bottom-4 z-10 rounded-xl shadow-md' : undefined}>
+              <LeaderboardPlayerRow
+                row={row}
+                isOpen={openId === id}
+                onToggle={() => toggle(id)}
+                fixturesById={fixturesById}
+                currentUser={currentUser}
+                leaderboard={leaderboard}
+                maxPoints={maxPoints}
+                onViewStats={onViewStats}
+              />
+            </div>
           );
         })}
       </div>
