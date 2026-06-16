@@ -139,6 +139,81 @@ function buildShareText(matchday, rows) {
   ].join('\n');
 }
 
+function buildPlayerCsv(row, fixturesById) {
+  const headers = [
+    'date', 'home', 'away', 'status',
+    'actual_ft', 'actual_ht',
+    'predicted_ft', 'predicted_ht',
+    'ht_pts', 'ft_pts', 'closest_pts', 'outcome_pts', 'total_pts',
+    'outcome',
+  ];
+
+  const outcomeOf = (ftHome, ftAway) => {
+    if (ftHome == null || ftAway == null) return '';
+    if (ftHome > ftAway) return 'home_win';
+    if (ftAway > ftHome) return 'away_win';
+    return 'draw';
+  };
+
+  const escape = (v) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const sorted = [...(row.match_points || [])].sort((a, b) => {
+    const mA = fixturesById?.get(String(a.match_id));
+    const mB = fixturesById?.get(String(b.match_id));
+    return new Date(mA?.date || 0) - new Date(mB?.date || 0);
+  });
+
+  const dataRows = sorted.map((entry) => {
+    const match = fixturesById?.get(String(entry.match_id));
+    const pred = entry.prediction || {};
+    const res = entry.result || {};
+    const status = match ? displayStatus(match) : (entry.scored ? 'FINISHED' : 'UPCOMING');
+
+    const actualFt = res.ft_home != null
+      ? `${res.ft_home}-${res.ft_away}`
+      : match?.home_score != null ? `${match.home_score}-${match.away_score}` : '';
+    const actualHt = res.ht_home != null ? `${res.ht_home}-${res.ht_away}` : '';
+    const predFt = pred.ft_home != null ? `${pred.ft_home}-${pred.ft_away}` : '';
+    const predHt = pred.ht_home != null ? `${pred.ht_home}-${pred.ht_away}` : '';
+
+    const ftHome = res.ft_home ?? match?.home_score;
+    const ftAway = res.ft_away ?? match?.away_score;
+
+    return [
+      match?.date ? new Date(match.date).toISOString().slice(0, 10) : '',
+      teamName(match?.home) || `Match #${entry.match_id}`,
+      teamName(match?.away) || '',
+      status,
+      actualFt,
+      actualHt,
+      predFt,
+      predHt,
+      roundPoints(entry.ht_pts || 0),
+      roundPoints(entry.ft_pts || 0),
+      roundPoints(entry.closest_pts || 0),
+      roundPoints(entry.outcome_pts || 0),
+      roundPoints(entry.match_total || 0),
+      outcomeOf(ftHome, ftAway),
+    ].map(escape).join(',');
+  });
+
+  return [headers.join(','), ...dataRows].join('\n');
+}
+
+function downloadPlayerCsv(row, fixturesById) {
+  const csv = buildPlayerCsv(row, fixturesById);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${row.username}_predictions_wc2026.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Charts (Recharts) ────────────────────────────────────────────────────────
 
 const CHART_PALETTE = [
@@ -1192,10 +1267,154 @@ function StandingsRow({ row, isCurrentUser, isSelected, onSelect }) {
   );
 }
 
+function buildLlmPrompt(match, csv = '', leagueCtx = null) {
+  const home = teamName(match?.home) || 'Home';
+  const away = teamName(match?.away) || 'Away';
+
+  const date = match?.date ? new Date(match.date) : null;
+  const dateStr = date
+    ? date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : '[Date unknown]';
+  const timeStr = date
+    ? date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  const kickoff = timeStr ? `${dateStr}, ${timeStr}` : dateStr;
+
+  const venueParts = [match?.stadium, match?.city].filter(Boolean);
+  const venue = venueParts.length ? venueParts.join(', ') : '[Venue TBC]';
+
+  return `**IMPORTANT CONTEXT — PLEASE READ BEFORE RESPONDING:**
+
+This is for a casual family and friends prediction game. No money, no betting.
+We each pick a HT and FT scoreline before each match and earn points based on
+accuracy. Points are awarded per category:
+- **HT pts** — exact half-time score correct
+- **FT pts** — exact full-time score correct
+- **Outcome pts** — correct result (win/draw/loss)
+- **Closest pts** — closest overall scoreline in the group
+
+Think of it like a pub quiz. Give me your best educated football guess.
+
+---
+
+## STEP 1 — ANALYSE MY PREDICTION HISTORY (CSV below)
+
+Before researching the match, read my full prediction history from the CSV
+pasted at the bottom and answer these specific questions:
+
+1. **Score calibration**: Is my average predicted scoreline higher or lower
+   than actual results? Am I typically over-optimistic about goals?
+2. **HT vs FT accuracy**: Do I score more HT pts or FT pts? Which score am
+   I better at predicting?
+3. **Outcome bias**: Do I over-predict home wins, away wins, or draws?
+4. **Zero-point matches**: What are the common patterns in matches where I
+   scored 0 total pts? (e.g. wrong outcome, too high-scoring a prediction)
+5. **Per-scoreline HT hit rate**: For every specific HT scoreline I have
+   predicted (0-0, 1-0, 0-1, 1-1, etc.), give me a table showing how many
+   times I predicted it and how many times it was correct. Identify which
+   HT lines are profitable and which are money-losers.
+6. **HT score tendency**: Do I predict 0-0 HT too often or not enough?
+7. **Volatility vs safety**: Based on my history and my current league
+   position (provided below), am I better served by a "safe" pick that
+   maximises expected points, or a "volatile" contrarian pick that
+   differentiates me from the rest of the pool?
+
+Summarise these findings in 5–7 bullet points labelled
+**"My Prediction Profile"** before moving to the match analysis.
+
+**My current league position:**
+${leagueCtx ? `- Rank: #${leagueCtx.rank} of ${leagueCtx.total} players
+- Total points: ${leagueCtx.pts}
+- Gap to leader: ${leagueCtx.gapToLeader > 0 ? `${leagueCtx.gapToLeader} pts behind` : 'I am the leader'}
+- Points system: HT exact score, FT exact score, correct outcome, closest score in group` : '- League position not available'}
+
+---
+
+## STEP 2 — MATCH RESEARCH
+
+You are an expert football analyst with access to current web search.
+Research and analyse ALL of the following — search for the latest news,
+confirmed lineups, and any injury updates from the past 48 hours:
+
+**Match:** ${home} vs ${away}
+**Competition:** FIFA World Cup 2026
+**Date / Kickoff:** ${kickoff}
+**Venue:** ${venue}
+
+### 2a. Recent Form (last 5–10 matches each)
+- Results, goals scored/conceded
+- Home vs away vs neutral venue performance
+- Warm-up friendlies or competitive matches leading into the tournament
+
+### 2b. Head-to-Head Record
+- Last 5–10 meetings, scorelines, competition context
+- Any clear patterns (low-scoring, dominant side, late goals, etc.)
+
+### 2c. Squad & Team News *(search for latest — this is the most time-sensitive section)*
+- Confirmed starting XI or expected lineup
+- Key absences (injury, suspension, tactical rest)
+- Star players in exceptional form or returning from injury
+
+### 2d. Tactical Style
+- How each team typically sets up (shape, press, defensive line)
+- Average goals scored and conceded per game this campaign
+- Slow or fast starters? (critical for HT guess)
+- Set-piece threat and vulnerability
+
+### 2e. Tournament Context
+- Group stage pressure / must-win scenario?
+- Psychological edge, motivation, fatigue, travel
+- How does each team historically perform as favourite vs underdog at WC?
+
+### 2f. Statistical Indicators
+- Win probabilities from at least one major forecaster (Opta, FiveThirtyEight, etc.)
+- Historical World Cup HT score frequencies for teams of this calibre matchup
+- Over/under 2.5 goals market signal as a goal-count anchor
+
+---
+
+## STEP 3 — CALIBRATED PREDICTION
+
+Using both my Prediction Profile (Step 1) and the match analysis (Step 2):
+
+**Primary pick** *(plays to my strengths and corrects for my known biases)*:
+- Half-Time Score: ${home} X – X ${away}
+- Full-Time Score: ${home} X – X ${away}
+
+**Confidence:** Low / Medium / High
+
+**Why this scoreline** (3–5 bullets):
+- ...
+
+**Calibration note**: Explain in 1–2 sentences how my historical biases
+influenced this pick vs what a neutral analysis would have suggested.
+
+**Backup pick** *(contrarian — use this if differentiation matters more
+than expected value given my league position)*:
+- Half-Time Score: ${home} X – X ${away}
+- Full-Time Score: ${home} X – X ${away}
+
+**Differentiation check**: What scoreline do you think most casual players
+in a family/friends pool will pick for this match? Does the primary pick
+overlap heavily with that consensus? If so, is my league position strong
+enough to justify playing it safe, or should I take the contrarian?
+
+**Points strategy tip**: Based on my per-scoreline HT hit rate and my 0
+exact FT history, give me a one-line action: which HT scoreline from my
+profitable lines fits this match best, and should I prioritise outcome +
+closest or swing for exact scores?
+
+---
+
+## MY PREDICTION HISTORY CSV:
+
+${csv || '[No prediction history available]'}`;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function MatchdayReportPage() {
-  const { user: currentUser, token } = useAuth();
+  const { user: currentUser, token, isAdmin } = useAuth();
   const { leaderboard, fixtures, loading, error, refresh: refreshAll } = useAppData();
   const matchdays = useMemo(() => groupFixturesByMatchday(fixtures), [fixtures]);
   const defaultKey = useMemo(() => {
@@ -1226,6 +1445,7 @@ export function MatchdayReportPage() {
   const allScoredMatchdays = useMemo(() => matchdays.filter(isActiveReportDay), [matchdays]);
 
   const [pdfState, setPdfState] = useState('idle'); // idle | generating | done
+  const [promptCopyState, setPromptCopyState] = useState('Copy Prompt');
 
   async function downloadPDF() {
     setPdfState('generating');
@@ -1464,14 +1684,27 @@ export function MatchdayReportPage() {
                   <p className="text-sm font-black text-slate-950">{spotlightRow?.username ?? '—'}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedUsername(null)}
-                className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Close analysis"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => downloadPlayerCsv(spotlightRow, fixturesById)}
+                    className="flex h-8 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                    aria-label="Download predictions as CSV"
+                  >
+                    <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    CSV
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedUsername(null)}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Close analysis"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable body */}
@@ -1588,6 +1821,60 @@ export function MatchdayReportPage() {
                   {!predLoading && !predError && predRows.length > 0 && (
                     <PredictionsTable rows={predRows} currentUser={currentUser} matchDate={predMatch?.date} actualResult={predActualResult} />
                   )}
+
+                  {isAdmin && predMatch && (() => {
+                    const myRow = rows.find((r) => r.username === currentUser?.username)
+                      || leaderboard.find((r) => r.username === currentUser?.username);
+                    const myCsv = myRow ? buildPlayerCsv(myRow, fixturesById) : '';
+                    const leader = [...leaderboard].sort((a, b) => (b.total || 0) - (a.total || 0))[0];
+                    const leagueCtx = myRow ? {
+                      rank: myRow.rank ?? myRow.selectedRank ?? '?',
+                      total: leaderboard.length,
+                      pts: roundPoints(myRow.total || 0),
+                      gapToLeader: roundPoints(Math.max(0, (leader?.total || 0) - (myRow.total || 0))),
+                    } : null;
+                    const prompt = buildLlmPrompt(predMatch, myCsv, leagueCtx);
+                    return (
+                      <details className="group mt-6">
+                        <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 transition hover:bg-violet-100">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-violet-600" aria-hidden="true" />
+                            <span className="text-xs font-black uppercase tracking-widest text-violet-700">AI Research Prompt</span>
+                            <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-black text-violet-800">Admin</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-violet-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+                        </summary>
+
+                        <div className="mt-2 overflow-hidden rounded-xl border border-violet-200 bg-white shadow-sm">
+                          <div className="flex items-center justify-between border-b border-violet-100 bg-violet-50/60 px-4 py-2.5">
+                            <p className="text-[11px] font-semibold text-violet-600">
+                              Your prediction history is pre-filled. Copy and paste into any LLM.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(prompt);
+                                  setPromptCopyState('Copied!');
+                                  setTimeout(() => setPromptCopyState('Copy Prompt'), 2500);
+                                } catch {}
+                              }}
+                              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-black text-violet-700 transition hover:bg-violet-50"
+                            >
+                              {promptCopyState === 'Copied!'
+                                ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                                : <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                              }
+                              {promptCopyState}
+                            </button>
+                          </div>
+                          <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-relaxed text-slate-700 [scrollbar-width:thin]">
+                            {prompt}
+                          </pre>
+                        </div>
+                      </details>
+                    );
+                  })()}
                 </>
               )}
             </div>
