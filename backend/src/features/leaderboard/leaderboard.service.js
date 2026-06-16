@@ -58,7 +58,7 @@ async function getRankedLeaderboard() {
   });
 
   return rows
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => b.total - a.total || a.username.localeCompare(b.username))
     .map((u, i) => ({ ...u, rank: i + 1 }));
 }
 
