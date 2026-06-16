@@ -5,6 +5,7 @@ import {
   Clock,
   Eye,
   Loader2,
+  MapPin,
   Save,
   Users,
   XCircle,
@@ -48,6 +49,35 @@ function numEq(a, b) {
   return na === nb;
 }
 
+function normalizeLocationPart(part) {
+  return String(part ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function formatMatchLocation(match) {
+  const seen = new Set();
+  const stadium = String(match?.stadium ?? "").trim();
+  const city = String(match?.city ?? "").trim();
+  const country = String(match?.country ?? "").trim();
+  const stadiumKey = normalizeLocationPart(stadium);
+  const cityKey = normalizeLocationPart(city);
+  const stadiumAlreadyNamesCity = Boolean(
+    stadiumKey && cityKey && stadiumKey.includes(cityKey),
+  );
+
+  return [stadium, stadiumAlreadyNamesCity ? "" : city, country]
+    .filter(Boolean)
+    .filter((part) => {
+      const key = normalizeLocationPart(part);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+}
+
 export function PredictionCard({
   match,
   draft,
@@ -75,6 +105,7 @@ export function PredictionCard({
   const isLive = locked && status === "LIVE";
   const isFinished = status === "FINISHED";
   const isUpcoming = !locked;
+  const locationLabel = formatMatchLocation(match);
 
   // Dirty check: draft differs from saved prediction?
   // An empty draft object means the usePredictionDrafts effect hasn't seeded it yet
@@ -108,43 +139,54 @@ export function PredictionCard({
     >
       {/* ── Header bar ── */}
       <div
-        className={`flex items-center justify-between gap-2 border-b px-3 py-2 sm:px-4 ${
+        className={`border-b px-3 py-2.5 sm:px-4 ${
           isLive
             ? "border-rose-100 bg-rose-50/70"
             : "border-slate-100 bg-slate-50/60"
         }`}
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
-          <span className="flex shrink-0 items-center gap-1.5 font-medium">
-            <CalendarDays className="h-3 w-3" aria-hidden="true" />
-            {formatDate(match.date)} · {formatTime(match.date)} <span className="text-slate-400">{tzAbbr(match.date)}</span>
-          </span>
-          {match.group && (
-            <span className="shrink-0 font-semibold">{match.group}</span>
-          )}
-          {match.stage && (
-            <span className="hidden font-medium text-slate-400 sm:inline">
-              {match.stage}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+            <span className="flex shrink-0 items-center gap-1.5 font-medium text-slate-600">
+              <CalendarDays className="h-3 w-3 text-slate-400" aria-hidden="true" />
+              {formatDate(match.date)} · {formatTime(match.date)} <span className="text-slate-400">{tzAbbr(match.date)}</span>
             </span>
-          )}
+            {match.group && (
+              <span className="shrink-0 font-semibold">{match.group}</span>
+            )}
+            {match.stage && (
+              <span className="hidden font-medium text-slate-400 sm:inline">
+                {match.stage}
+              </span>
+            )}
+          </div>
+          <div
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+              isLive
+                ? "bg-rose-600 text-white shadow-sm"
+                : isFinished
+                  ? "bg-slate-100 text-slate-500"
+                  : "bg-sky-50 text-sky-600"
+            }`}
+          >
+            {isLive && (
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+              </span>
+            )}
+            {statusPillLabel(match)}
+          </div>
         </div>
-        <div
-          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
-            isLive
-              ? "bg-rose-600 text-white shadow-sm"
-              : isFinished
-                ? "bg-slate-100 text-slate-500"
-                : "bg-sky-50 text-sky-600"
-          }`}
-        >
-          {isLive && (
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-            </span>
-          )}
-          {statusPillLabel(match)}
-        </div>
+        {locationLabel && (
+          <div
+            className="mt-1.5 flex min-w-0 items-start gap-1.5 text-xs font-normal leading-snug text-slate-500"
+            title={locationLabel}
+          >
+            <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
+            <span className="min-w-0 break-words">{locationLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* ── Teams + score ── */}
