@@ -8,7 +8,15 @@ const FUTURE = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // tomo
 const HOME = { name: 'Brazil', abbreviation: 'BRA' };
 const AWAY = { name: 'Argentina', abbreviation: 'ARG' };
 
-const BASE = { group: 'Group E', stage: 'First Stage', home: HOME, away: AWAY };
+const BASE = {
+  group: 'Group E',
+  stage: 'First Stage',
+  stadium: 'Estadio Azteca',
+  city: 'Mexico City',
+  country: 'MEX',
+  home: HOME,
+  away: AWAY,
+};
 
 const SCENARIOS = [
   {
