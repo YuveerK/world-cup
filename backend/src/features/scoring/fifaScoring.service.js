@@ -178,9 +178,12 @@ async function checkAndScoreFinishedMatches() {
         (m.HomeTeamScore > 0 || m.AwayTeamScore > 0 || isLongPastKickoff(m))
     );
 
-    const officialIds = officiallyFinished.map((m) => normalizeId(m.IdMatch));
-    const alreadyScored = officialIds.length
-      ? await repo.findResultsIn(officialIds)
+    const candidateIds = [
+      ...officiallyFinished.map((m) => normalizeId(m.IdMatch)),
+      ...inferredFinished.map((m) => normalizeId(m.IdMatch)),
+    ];
+    const alreadyScored = candidateIds.length
+      ? await repo.findResultsIn(candidateIds)
       : [];
 
     const completeScoredSet = new Set(
@@ -191,7 +194,7 @@ async function checkAndScoreFinishedMatches() {
 
     const toScore = [
       ...officiallyFinished.filter((m) => !completeScoredSet.has(normalizeId(m.IdMatch))),
-      ...inferredFinished,
+      ...inferredFinished.filter((m) => !completeScoredSet.has(normalizeId(m.IdMatch))),
     ];
 
     for (const match of liveMatches) {
