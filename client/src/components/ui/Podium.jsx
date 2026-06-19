@@ -39,23 +39,25 @@ function PodiumCard({ row, isCurrentUser, onSelect }) {
     <>
       <div className="relative mb-3 flex flex-col items-center">
         {isChampion && <Crown className="mb-1 h-5 w-5 text-amber-500" aria-hidden="true" />}
-        {isCurrentUser && (
-          <span className="mb-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-            You
-          </span>
-        )}
-        <div
-          className={`grid place-items-center rounded-full bg-gradient-to-br ${style.avatar} font-extrabold ring-2 ${
-            isCurrentUser ? 'ring-blue-500' : style.ring
-          } ring-offset-2 ring-offset-white ${isChampion ? 'h-16 w-16 text-xl' : 'h-12 w-12 text-base'}`}
-        >
-          {getInitials(row.username)}
+        <div className="relative">
+          <div
+            className={`grid place-items-center rounded-full bg-gradient-to-br ${style.avatar} font-extrabold ring-2 ${
+              isCurrentUser ? 'ring-blue-500' : style.ring
+            } ring-offset-2 ring-offset-white ${isChampion ? 'h-16 w-16 text-xl' : 'h-12 w-12 text-base'}`}
+          >
+            {getInitials(row.username)}
+          </div>
+          {isCurrentUser && (
+            <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+              You
+            </span>
+          )}
         </div>
       </div>
-      <p className="max-w-full truncate text-center text-sm font-bold text-slate-950">{row.username}</p>
+      <p className="mt-2 max-w-full truncate text-center text-sm font-bold text-slate-950">{row.username}</p>
       <p className={`text-center text-2xl font-black ${style.accent}`}>{roundPoints(row.total)}</p>
       <p className="mb-2 text-center text-[11px] font-medium text-slate-400">{row.predictions_count || 0} picks</p>
-      <div className={`flex w-full items-start justify-center rounded-t-lg bg-gradient-to-b ${style.block} pt-2`}>
+      <div className={`flex w-full items-center justify-center rounded-t-lg bg-gradient-to-b ${style.block}`}>
         <span className="text-lg font-black text-blue-950/80">{rank}</span>
       </div>
     </>
