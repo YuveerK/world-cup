@@ -36,27 +36,41 @@ export function displayStatus(match) {
   if (!isPastMatch(match)) return 'UPCOMING';
   if (match.status === 'LIVE') return 'LIVE';
   if (match.status === 'FINISHED') return 'FINISHED';
-  if (hasMatchScore(match)) return 'FINISHED';
+  // Only infer FINISHED from a score when the API hasn't provided a specific status yet
+  // (TBD, UPCOMING, or null). Unknown codes like STATUS_11 (weather delay) must not be
+  // treated as finished — trust the explicit status string.
+  const isKnownPreGame = !match.status || match.status === 'UPCOMING' || match.status === 'TBD';
+  if (isKnownPreGame && hasMatchScore(match)) return 'FINISHED';
   return match.status ?? 'UPCOMING';
 }
 
 export function scoreStatusLabel(match) {
-  if (displayStatus(match) === 'LIVE') {
+  const status = displayStatus(match);
+  if (status === 'LIVE') {
     if (isHalfTime(match)) return 'HT';
     const minute = formatMatchMinute(match.minute);
     return minute ? `Live ${minute}` : 'Live';
   }
-  if (displayStatus(match) === 'FINISHED') return 'FT';
+  if (status === 'FINISHED') return 'FT';
+  if (status === 'SUSPENDED') return 'Suspended';
+  if (status === 'ABANDONED') return 'Abandoned';
+  if (status === 'CANCELLED') return 'Cancelled';
+  if (status?.startsWith('STATUS_')) return 'Delayed';
   return 'Score';
 }
 
 export function statusPillLabel(match) {
-  if (displayStatus(match) === 'LIVE') {
+  const status = displayStatus(match);
+  if (status === 'LIVE') {
     if (isHalfTime(match)) return 'Half time';
     const minute = formatMatchMinute(match.minute);
     return minute ? `Live · ${minute}` : 'Live';
   }
-  if (displayStatus(match) === 'FINISHED') return 'Full Time';
+  if (status === 'FINISHED') return 'Full Time';
+  if (status === 'SUSPENDED') return 'Suspended';
+  if (status === 'ABANDONED') return 'Abandoned';
+  if (status === 'CANCELLED') return 'Cancelled';
+  if (status?.startsWith('STATUS_')) return 'Delayed';
   return 'Upcoming';
 }
 

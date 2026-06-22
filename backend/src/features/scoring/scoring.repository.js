@@ -21,7 +21,7 @@ async function findResult(matchId) {
 async function findResultsIn(matchIds) {
   if (!matchIds.length) return [];
   const { data, error } = await supabase
-    .from('match_results').select('match_id, ht_home, ht_away').in('match_id', matchIds);
+    .from('match_results').select('match_id, ht_home, ht_away, ft_home, ft_away').in('match_id', matchIds);
   if (error) throw error;
   return data || [];
 }

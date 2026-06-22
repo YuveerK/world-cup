@@ -46,7 +46,9 @@ function isHalfTimePayload(match) {
 function mapStatus(match, live = null) {
   const statusCode = live?.MatchStatus ?? match.MatchStatus;
   const mapped = MATCH_STATUS[statusCode] ?? `STATUS_${statusCode}`;
-  const canInfer = !['LIVE', 'FINISHED', 'ABANDONED', 'SUSPENDED', 'CANCELLED'].includes(mapped);
+  // Only infer FINISHED for known pre-game statuses (TBD=0, UPCOMING=1).
+  // Unknown codes (e.g. 11 = weather delay) must not be treated as finished.
+  const canInfer = mapped === 'TBD' || mapped === 'UPCOMING';
   if (canInfer && hasCalendarScore(match) && isPastMatch(match)) return 'FINISHED';
   return mapped;
 }

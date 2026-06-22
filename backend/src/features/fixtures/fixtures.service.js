@@ -25,7 +25,11 @@ async function getAllFixtures() {
       const kickoff = new Date(match.Date || 0).getTime();
       const isPastKickoff = kickoff <= now && now - kickoff < FINISHED_AFTER_MS;
       const isTerminal = TERMINAL_STATUSES.has(match.MatchStatus);
-      const needsLiveCheck = isLiveStatus || (isPastKickoff && !isTerminal);
+      // A terminal match still at period 4 (half-time interval) is anomalous — the calendar
+      // may have prematurely marked the match finished during a weather suspension. Always
+      // fetch live data in this case regardless of the FINISHED_AFTER_MS window.
+      const isAnomalousHalfTimeFinish = isTerminal && match.Period === 4;
+      const needsLiveCheck = isLiveStatus || (isPastKickoff && !isTerminal) || isAnomalousHalfTimeFinish;
 
       if (!needsLiveCheck) return { match, live: null };
       try {

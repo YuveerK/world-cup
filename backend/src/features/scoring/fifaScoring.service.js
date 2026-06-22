@@ -107,8 +107,19 @@ async function scoreFromFifa(match) {
     fifaClient.getTimeline(stageId, matchId).catch(() => null),
   ]);
 
-  if (live.MatchStatus === 3) {
-    logger.info(`Match ${matchId} is LIVE — skipping scoring`);
+  // Only score when the live endpoint confirms a known final or pre-game state.
+  // Unknown codes (e.g. 11 = weather delay), LIVE (3), suspended (7), abandoned (6),
+  // cancelled (8) all indicate the match is not yet done.
+  if (![0, 1, 2, 4, 5].includes(live.MatchStatus)) {
+    logger.info(`Match ${matchId} has non-final status ${live.MatchStatus} — skipping scoring`);
+    return;
+  }
+
+  // Period 4 is the half-time interval — the match is not over even if the FIFA calendar
+  // has already marked it finished (can happen during weather suspensions where the API
+  // returns inconsistent status codes across calls).
+  if (Number(live.Period) === 4) {
+    logger.info(`Match ${matchId} is still at half-time (period 4) — skipping scoring`);
     return;
   }
 
@@ -170,10 +181,15 @@ async function checkAndScoreFinishedMatches() {
     const results = data.Results || [];
 
     const liveMatches = results.filter((m) => m.MatchStatus === 3);
-    const officiallyFinished = results.filter((m) => [2, 4, 5].includes(m.MatchStatus));
+    // Exclude matches still at Period 4 (the half-time interval) even when the calendar
+    // marks them as finished — this happens during weather suspensions where FIFA's API
+    // intermittently flips between finished and delay status codes.
+    const officiallyFinished = results.filter(
+      (m) => [2, 4, 5].includes(m.MatchStatus) && Number(m.Period) !== 4
+    );
     const inferredFinished = results.filter(
       (m) =>
-        ![2, 3, 4, 5].includes(m.MatchStatus) &&
+        [0, 1].includes(m.MatchStatus) &&
         hasCalendarScore(m) &&
         (m.HomeTeamScore > 0 || m.AwayTeamScore > 0 || isLongPastKickoff(m))
     );
@@ -186,14 +202,26 @@ async function checkAndScoreFinishedMatches() {
       ? await repo.findResultsIn(candidateIds)
       : [];
 
+    const scoredMap = new Map(alreadyScored.map((r) => [normalizeId(r.match_id), r]));
+
+    // For inferred matches: skip once fully scored (ht+ft both stored).
     const completeScoredSet = new Set(
       alreadyScored
         .filter((r) => r.ht_home != null && r.ht_away != null)
         .map((r) => normalizeId(r.match_id))
     );
 
+    // For officially finished matches: re-score if the stored FT doesn't match the calendar
+    // score (handles cases where a match was incorrectly scored while suspended).
+    function needsRescoring(match) {
+      const stored = scoredMap.get(normalizeId(match.IdMatch));
+      if (!stored || stored.ht_home == null || stored.ht_away == null) return true;
+      return Number(stored.ft_home) !== match.HomeTeamScore ||
+             Number(stored.ft_away) !== match.AwayTeamScore;
+    }
+
     const toScore = [
-      ...officiallyFinished.filter((m) => !completeScoredSet.has(normalizeId(m.IdMatch))),
+      ...officiallyFinished.filter((m) => needsRescoring(m)),
       ...inferredFinished.filter((m) => !completeScoredSet.has(normalizeId(m.IdMatch))),
     ];
 
