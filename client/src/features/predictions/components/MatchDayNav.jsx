@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { CalendarRange } from 'lucide-react';
 
 function dayChipLabel(date) {
@@ -10,10 +11,18 @@ function dayChipLabel(date) {
 }
 
 export function MatchDayNav({ days, activeDay, onSelect, totalCount }) {
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (!scrollRef.current || !activeDay || activeDay === 'ALL') return;
+    const btn = scrollRef.current.querySelector(`[data-day="${activeDay}"]`);
+    if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  }, [activeDay]);
+
   if (!days.length) return null;
 
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+    <div ref={scrollRef} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
       <button
         type="button"
         onClick={() => onSelect('ALL')}
@@ -38,6 +47,7 @@ export function MatchDayNav({ days, activeDay, onSelect, totalCount }) {
         return (
           <button
             key={group.key}
+            data-day={group.key}
             type="button"
             onClick={() => onSelect(group.key)}
             className={`relative flex shrink-0 flex-col items-center rounded-xl border px-4 py-2 transition ${
