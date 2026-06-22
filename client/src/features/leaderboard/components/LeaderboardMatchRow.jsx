@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, Check, ChevronDown } from 'lucide-react';
 import { roundPoints } from '@/lib/utils/number';
-import { canShowMatchDetails, displayStatus, hasMatchScore, scoreText } from '@/features/matches/utils/matchStatus';
+import { canShowMatchDetails, displayStatus, hasMatchScore, scoreText, statusPillLabel } from '@/features/matches/utils/matchStatus';
 import { matchTitle, teamName } from '@/features/matches/utils/matchFormatters';
 import { MATCH_POINT_PILL_CONFIG } from '../constants';
 import { emptyScore, formatScorePair } from '../utils/leaderboardScores';
@@ -78,7 +78,7 @@ export function LeaderboardMatchRow({ entry, match, onViewStats }) {
                   status === 'FINISHED' ? 'text-blue-600' : 'text-amber-600'
                 }`}
               >
-                {status}
+                {statusPillLabel(match || {})}
               </p>
             )}
           </div>

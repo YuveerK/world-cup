@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   Clock,
@@ -104,6 +105,7 @@ export function PredictionCard({
   // on an upcoming match can never collapse the input form.
   const isLive = locked && status === "LIVE";
   const isFinished = status === "FINISHED";
+  const isDelayed = locked && !isLive && !isFinished && (status?.startsWith('STATUS_') || status === 'SUSPENDED' || status === 'ABANDONED');
   const isUpcoming = !locked;
   const locationLabel = formatMatchLocation(match);
 
@@ -166,7 +168,9 @@ export function PredictionCard({
                 ? "bg-rose-600 text-white shadow-sm"
                 : isFinished
                   ? "bg-slate-100 text-slate-500"
-                  : "bg-sky-50 text-sky-600"
+                  : isDelayed
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-sky-50 text-sky-600"
             }`}
           >
             {isLive && (
@@ -382,6 +386,42 @@ export function PredictionCard({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── DELAYED / SUSPENDED: notice + locked prediction ── */}
+      {isDelayed && (
+        <div className="border-t border-amber-100 bg-amber-50/50 px-4 py-4 sm:px-5">
+          <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-amber-800">Match delayed</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-amber-700">
+                This match has been suspended and will resume when conditions allow. Your prediction is safely locked in — points will be awarded automatically once the full result is confirmed. No action needed.
+              </p>
+            </div>
+          </div>
+          {hasPrediction && (
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Your prediction
+              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="font-mono text-sm font-bold tabular-nums text-slate-500">
+                  HT{" "}
+                  {prediction.ht_home != null
+                    ? `${prediction.ht_home}–${prediction.ht_away}`
+                    : "—"}
+                </span>
+                <span className="font-mono text-sm font-bold tabular-nums text-slate-500">
+                  FT {prediction.ft_home}–{prediction.ft_away}
+                </span>
+              </div>
+            </div>
+          )}
+          {!hasPrediction && (
+            <p className="text-[11px] text-slate-400">You didn't submit a prediction for this match.</p>
+          )}
         </div>
       )}
 
