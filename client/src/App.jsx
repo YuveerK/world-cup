@@ -13,6 +13,7 @@ import { ProfilePage } from '@/features/account/pages/ProfilePage';
 import { CardPreviewPage } from '@/dev/CardPreviewPage';
 import { StandingsPage } from '@/features/standings/pages/StandingsPage';
 import { KnockoutPage } from '@/features/knockout/pages/KnockoutPage';
+import { MapPage } from '@/features/map/pages/MapPage';
 import { useAuth } from '@/app/providers/AuthContext';
 
 const MAIN = 'mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8';
@@ -59,6 +60,10 @@ function AppRoutes() {
         <Route
           path="/knockout"
           element={authGuard(<main className={MAIN}><KnockoutPage /></main>)}
+        />
+        <Route
+          path="/map"
+          element={authGuard(<MapPage />)}
         />
         <Route
           path="/profile"

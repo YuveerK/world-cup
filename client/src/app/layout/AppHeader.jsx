@@ -10,6 +10,7 @@ const CORE_NAV = [
   { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/standings', label: 'Standings' },
   { to: '/knockout', label: 'Knockout' },
+  { to: '/map', label: 'Map' },
   { to: '/reports', label: 'Reports' },
 ];
 
