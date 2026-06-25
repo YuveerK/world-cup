@@ -447,60 +447,6 @@ export function MatchdayReportPage() {
                   {!predLoading && !predError && predRows.length > 0 && (
                     <PredictionsTable rows={predRows} currentUser={currentUser} matchDate={predMatch?.date} actualResult={predActualResult} />
                   )}
-
-                  {/* AI Research Prompt — temporarily hidden
-                  {isAdmin && predMatch && (() => {
-                    const myRow = rows.find((r) => r.username === currentUser?.username)
-                      || leaderboard.find((r) => r.username === currentUser?.username);
-                    const myCsv = myRow ? buildPlayerCsv(myRow, fixturesById) : '';
-                    const topPlayer = [...leaderboard].sort((a, b) => (b.total || 0) - (a.total || 0))[0];
-                    const leagueCtx = myRow ? {
-                      rank: myRow.rank ?? myRow.selectedRank ?? '?',
-                      total: leaderboard.length,
-                      pts: roundPoints(myRow.total || 0),
-                      gapToLeader: roundPoints(Math.max(0, (topPlayer?.total || 0) - (myRow.total || 0))),
-                    } : null;
-                    const prompt = buildLlmPrompt(predMatch, myCsv, leagueCtx);
-                    return (
-                      <details className="group mt-6">
-                        <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 transition hover:bg-violet-100">
-                          <div className="flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-violet-600" aria-hidden="true" />
-                            <span className="text-xs font-black uppercase tracking-widest text-violet-700">AI Research Prompt</span>
-                            <span className="rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-black text-violet-800">Admin</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-violet-500 transition-transform group-open:rotate-180" aria-hidden="true" />
-                        </summary>
-                        <div className="mt-2 overflow-hidden rounded-xl border border-violet-200 bg-white shadow-sm">
-                          <div className="flex items-center justify-between border-b border-violet-100 bg-violet-50/60 px-4 py-2.5">
-                            <p className="text-[11px] font-semibold text-violet-600">
-                              Your prediction history is pre-filled. Copy and paste into any LLM.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  await navigator.clipboard.writeText(prompt);
-                                  setPromptCopyState('Copied!');
-                                  setTimeout(() => setPromptCopyState('Copy Prompt'), 2500);
-                                } catch {}
-                              }}
-                              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-black text-violet-700 transition hover:bg-violet-50"
-                            >
-                              {promptCopyState === 'Copied!'
-                                ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
-                                : <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                              }
-                              {promptCopyState}
-                            </button>
-                          </div>
-                          <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-relaxed text-slate-700 [scrollbar-width:thin]">
-                            {prompt}
-                          </pre>
-                        </div>
-                      </details>
-                    );
-                  })()} */}
                 </>
               )}
             </div>
