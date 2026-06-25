@@ -3,6 +3,7 @@ import { getStandings } from '../api/standingsApi';
 
 export function useStandings() {
   const [groups, setGroups] = useState([]);
+  const [thirdPlace, setThirdPlace] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -10,7 +11,9 @@ export function useStandings() {
     setLoading(true);
     setError(null);
     try {
-      setGroups(await getStandings());
+      const data = await getStandings();
+      setGroups(data.groups);
+      setThirdPlace(data.thirdPlace);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -22,5 +25,5 @@ export function useStandings() {
     load();
   }, [load]);
 
-  return { groups, loading, error, refresh: load };
+  return { groups, thirdPlace, loading, error, refresh: load };
 }

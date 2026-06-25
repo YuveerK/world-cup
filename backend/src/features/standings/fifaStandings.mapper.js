@@ -59,7 +59,28 @@ function mapRow(row) {
     gd: row.GoalsDiference, // FIFA's typo is kept to match the source field.
     pts: row.Points,
     form: recentForm(row),
+    conductScore: row.TeamConductScore ?? null,
+    qualificationStatus: row.QualificationStatus ?? null,
+    group: localeName(row.Group),
   };
+}
+
+function computeThirdPlaceTable(rows) {
+  const third = rows
+    .filter((r) => r.Position === 3)
+    .map(mapRow)
+    .sort((a, b) =>
+      b.pts - a.pts ||
+      b.gd - a.gd ||
+      b.gf - a.gf ||
+      (b.conductScore ?? -Infinity) - (a.conductScore ?? -Infinity)
+    );
+
+  return third.map((entry, i) => ({
+    ...entry,
+    rank: i + 1,
+    advances: i < 8,
+  }));
 }
 
 function groupAndSort(rows) {
@@ -82,4 +103,4 @@ function groupAndSort(rows) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-module.exports = { groupAndSort };
+module.exports = { groupAndSort, computeThirdPlaceTable };

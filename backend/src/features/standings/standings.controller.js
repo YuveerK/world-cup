@@ -6,8 +6,8 @@ const { getGroupStandings } = require('./standings.service');
 const { FIFA_BASE, FIFA_TIMEOUT_MS } = require('../../config/constants');
 
 const getStandings = asyncHandler(async (req, res) => {
-  const groups = await getGroupStandings();
-  res.json({ success: true, total: groups.length, groups });
+  const { groups, thirdPlace } = await getGroupStandings();
+  res.json({ success: true, total: groups.length, groups, thirdPlace });
 });
 
 const getFlagImage = asyncHandler(async (req, res) => {

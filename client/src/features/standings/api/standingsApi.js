@@ -6,20 +6,24 @@ function resolveFlagUrl(flag) {
   return `${API_BASE}${flag}`;
 }
 
+function resolveTeamFlags(teams) {
+  return (teams || []).map((entry) => ({
+    ...entry,
+    team: { ...(entry.team || {}), flag: resolveFlagUrl(entry.team?.flag) },
+  }));
+}
+
 function resolveFlags(groups) {
   return groups.map((group) => ({
     ...group,
-    teams: (group.teams || []).map((entry) => ({
-      ...entry,
-      team: {
-        ...(entry.team || {}),
-        flag: resolveFlagUrl(entry.team?.flag),
-      },
-    })),
+    teams: resolveTeamFlags(group.teams),
   }));
 }
 
 export async function getStandings() {
   const data = await apiRequest('/standings');
-  return resolveFlags(data.groups || []);
+  return {
+    groups: resolveFlags(data.groups || []),
+    thirdPlace: resolveTeamFlags(data.thirdPlace || []),
+  };
 }

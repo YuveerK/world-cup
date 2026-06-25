@@ -3,9 +3,10 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { useStandings } from '../hooks/useStandings';
 import { StandingsPageHeader } from '../components/StandingsPageHeader';
 import { StandingsGroupCard } from '../components/StandingsGroupCard';
+import { ThirdPlaceTable } from '../components/ThirdPlaceTable';
 
 export function StandingsPage() {
-  const { groups, loading, error, refresh } = useStandings();
+  const { groups, thirdPlace, loading, error, refresh } = useStandings();
 
   if (loading) return <LoadingPanel label="Loading standings" />;
 
@@ -36,12 +37,17 @@ export function StandingsPage() {
         ))}
       </div>
 
+      <ThirdPlaceTable teams={thirdPlace} animationDelay={groups.length * 40} />
+
       <p className="text-center text-xs text-slate-400">
         Data sourced from the{' '}
         <span className="font-medium text-slate-500">FIFA official API</span>
         {' | '}
         <span className="inline-block h-2 w-2 bg-emerald-500 align-middle" aria-hidden="true" />{' '}
         Advances to Round of 16
+        {' | '}
+        <span className="inline-block h-2 w-2 rounded-full bg-blue-500 align-middle" aria-hidden="true" />{' '}
+        Advances as best third-placed
       </p>
     </div>
   );
