@@ -157,7 +157,7 @@ export function AppHeader() {
           <div
             aria-hidden="true"
             onClick={() => setOpen(false)}
-            className={`fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+            className={`fixed inset-0 z-[9998] bg-slate-900/25 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
               open ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
           />
@@ -168,7 +168,7 @@ export function AppHeader() {
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
-            className={`fixed right-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+            className={`fixed right-0 top-0 z-[9999] flex h-full w-72 flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
               open ? 'translate-x-0' : 'translate-x-full'
             }`}
           >

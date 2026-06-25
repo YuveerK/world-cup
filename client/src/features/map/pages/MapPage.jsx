@@ -29,20 +29,34 @@ function ensurePulseKeyframes() {
 
 // ─── Venue state from matches ────────────────────────────────────────────────
 
+function isToday(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth()    === now.getMonth()    &&
+    d.getDate()     === now.getDate()
+  );
+}
+
 function getVenueState(matches) {
   if (!matches?.length) return 'default';
   const statuses = matches.map(displayStatus);
   if (statuses.includes('LIVE')) return 'live';
+  // Amber highlight for any venue with a match today (pre-game or already finished)
+  if (matches.some((m) => isToday(m.date))) return 'today';
   if (statuses.every((s) => s === 'FINISHED')) return 'finished';
   return 'upcoming';
 }
 
 // state → { bg, pulseColor, pulseDuration }
 const STATE_STYLE = {
-  live:     { bg: '#dc2626', pulseColor: 'rgba(220,38,38,0.28)',  pulseDuration: '1.1s' },
-  upcoming: { bg: '#111827', pulseColor: 'rgba(15,42,74,0.22)',   pulseDuration: '1.8s' },
-  finished: { bg: '#94a3b8', pulseColor: 'rgba(148,163,184,0.2)', pulseDuration: '1.8s' },
-  default:  { bg: '#374151', pulseColor: 'rgba(55,65,81,0.2)',    pulseDuration: '1.8s' },
+  live:     { bg: '#dc2626', pulseColor: 'rgba(220,38,38,0.28)',   pulseDuration: '1.1s' },
+  today:    { bg: '#d97706', pulseColor: 'rgba(217,119,6,0.28)',   pulseDuration: '1.6s' },
+  upcoming: { bg: '#111827', pulseColor: 'rgba(15,42,74,0.22)',    pulseDuration: '1.8s' },
+  finished: { bg: '#94a3b8', pulseColor: 'rgba(148,163,184,0.2)',  pulseDuration: '1.8s' },
+  default:  { bg: '#374151', pulseColor: 'rgba(55,65,81,0.2)',     pulseDuration: '1.8s' },
 };
 
 // ─── Marker icon ────────────────────────────────────────────────────────────
@@ -326,6 +340,16 @@ function VenueCard({ venue, matches, onClose }) {
           </div>
         )}
       </div>
+
+      {/* Mobile close strip */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex w-full items-center justify-center gap-2 border-t border-slate-100 py-3 text-sm font-semibold text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600 sm:hidden"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+        Close
+      </button>
     </div>
   );
 }
@@ -399,6 +423,15 @@ export function MapPage() {
         ))}
       </MapContainer>
 
+      {/* Tap-outside backdrop — covers the map behind the card on mobile */}
+      {selectedVenue && (
+        <div
+          className="absolute inset-0 z-[999] sm:hidden"
+          onClick={() => setSelectedVenue(null)}
+          aria-hidden="true"
+        />
+      )}
+
       {selectedVenue && (
         <VenueCard
           venue={selectedVenue}
@@ -407,9 +440,9 @@ export function MapPage() {
         />
       )}
 
-      {/* Top-right badge */}
+      {/* Top-right badge — hidden on mobile to avoid conflicting with the venue card */}
       <div
-        className="absolute right-4 top-4 z-[1000] rounded-xl px-4 py-2.5"
+        className="absolute right-4 top-4 z-[1000] hidden rounded-xl px-4 py-2.5 sm:block"
         style={{
           background: 'rgba(255,255,255,0.8)',
           backdropFilter: 'blur(14px)',
@@ -420,6 +453,41 @@ export function MapPage() {
       >
         <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-amber-500">FIFA World Cup 2026</p>
         <p className="text-sm font-bold text-slate-900">16 venues · 🇺🇸 🇨🇦 🇲🇽</p>
+      </div>
+
+      {/* Legend — bottom-right */}
+      <div
+        className="absolute bottom-6 right-4 z-[1000] rounded-xl px-3.5 py-3"
+        style={{
+          background: 'rgba(255,255,255,0.82)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          border: '1px solid rgba(255,255,255,0.65)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.06)',
+        }}
+      >
+        <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">Legend</p>
+        <div className="space-y-1.5">
+          {[
+            { color: '#dc2626', label: 'Live now',      pulse: true  },
+            { color: '#d97706', label: 'Match today',   pulse: false },
+            { color: '#111827', label: 'Upcoming',      pulse: false },
+            { color: '#94a3b8', label: 'Finished',      pulse: false },
+          ].map(({ color, label, pulse }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
+                {pulse && (
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+                    style={{ background: color }}
+                  />
+                )}
+                <span className="relative inline-flex h-3 w-3 rounded-full" style={{ background: color }} />
+              </span>
+              <span className="text-[11px] font-medium text-slate-600">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
