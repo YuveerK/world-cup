@@ -21,14 +21,22 @@ async function savePrediction(userId, matchId, scores) {
   // Kickoff unknown (match not yet in calendar): check if a result already exists.
   const result = await scoringRepo.findResult(matchId);
   if (result && result.ht_home != null && result.ht_away != null) {
-    await scoreFromData(matchId, result.ft_home, result.ft_away, result.ht_home, result.ht_away);
+    await scoreFromData(
+      matchId, result.ft_home, result.ft_away, result.ht_home, result.ht_away,
+      result.et_ht_home, result.et_ht_away, result.et_ft_home, result.et_ft_away,
+      result.pen_home, result.pen_away,
+    );
     return { scored: true };
   }
 
   // No stored result — try scoring directly from the FIFA live endpoint.
   const scored = await tryScoreById(matchId);
   if (!scored && result) {
-    await scoreFromData(matchId, result.ft_home, result.ft_away, result.ht_home, result.ht_away);
+    await scoreFromData(
+      matchId, result.ft_home, result.ft_away, result.ht_home, result.ht_away,
+      result.et_ht_home, result.et_ht_away, result.et_ft_home, result.et_ft_away,
+      result.pen_home, result.pen_away,
+    );
     return { scored: true, partialResult: true };
   }
   return { scored };

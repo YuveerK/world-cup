@@ -1,17 +1,12 @@
 'use strict';
 
 const asyncHandler = require('../../shared/http/asyncHandler');
+const { validateSubmitPrediction } = require('./predictions.schemas');
 const svc = require('./predictions.service');
 
 const submit = asyncHandler(async (req, res) => {
   const { matchId } = req.params;
-  const raw = req.body;
-  const scores = {
-    ft_home: parseInt(raw.ft_home, 10),
-    ft_away: parseInt(raw.ft_away, 10),
-    ht_home: raw.ht_home != null ? parseInt(raw.ht_home, 10) : null,
-    ht_away: raw.ht_away != null ? parseInt(raw.ht_away, 10) : null,
-  };
+  const scores = validateSubmitPrediction(req);
   const result = await svc.savePrediction(req.user.id, matchId, scores);
   res.json({ success: true, ...result });
 });
