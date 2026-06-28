@@ -4,7 +4,7 @@ import { roundPoints } from '@/lib/utils/number';
 import { teamName } from '@/features/matches/utils/matchFormatters';
 import { AdminScorePair } from './AdminScorePair';
 
-const FIELDS = ['ht_home', 'ht_away', 'ft_home', 'ft_away'];
+const FIELDS = ['ht_home', 'ht_away', 'ft_home', 'ft_away', 'et_ht_home', 'et_ht_away', 'et_ft_home', 'et_ft_away', 'pen_home', 'pen_away'];
 const norm = (v) => (v === '' || v == null ? '' : String(v));
 
 function initials(name = '') {
@@ -39,16 +39,30 @@ export function AdminPredictionRow({
 
   const p = row.points || {};
   const total = row.points
-    ? roundPoints((p.ht_pts || 0) + (p.ft_pts || 0) + (p.closest_pts || 0) + (p.outcome_pts || 0))
+    ? roundPoints(
+        (p.ht_pts || 0) + (p.ft_pts || 0) + (p.closest_pts || 0) + (p.outcome_pts || 0) +
+        (p.et_ht_pts || 0) + (p.et_ft_pts || 0) + (p.et_outcome_pts || 0) + (p.et_closest_pts || 0) +
+        (p.pen_exact_pts || 0) + (p.pen_winner_pts || 0) + (p.pen_closest_pts || 0),
+      )
     : 0;
 
   const isCurrentUser = String(row.user.id) === String(currentUser?.id);
   const isProtectedAdmin = isCurrentUser || row.user.is_admin === true;
   const hasPrediction = Boolean(row.prediction);
   const isDirty = FIELDS.some((k) => norm(draft[k]) !== norm(row.prediction?.[k]));
+  const isKnockout = !match?.group && Boolean(match?.stage);
 
   const homeAbbr = abbr(match?.home);
   const awayAbbr = abbr(match?.away);
+
+  const draftFtHome = draft.ft_home === '' || draft.ft_home == null ? null : Number(draft.ft_home);
+  const draftFtAway = draft.ft_away === '' || draft.ft_away == null ? null : Number(draft.ft_away);
+  const ftDraw = draftFtHome !== null && draftFtAway !== null && draftFtHome === draftFtAway;
+  const draftEtFtHome = draft.et_ft_home === '' || draft.et_ft_home == null ? null : Number(draft.et_ft_home);
+  const draftEtFtAway = draft.et_ft_away === '' || draft.et_ft_away == null ? null : Number(draft.et_ft_away);
+  const etFtDraw = draftEtFtHome !== null && draftEtFtAway !== null && draftEtFtHome === draftEtFtAway;
+  const showEtInputs = isKnockout && ftDraw;
+  const showPenInputs = showEtInputs && etFtDraw;
 
   function handleSavePassword() {
     if ((passwordDraft || '').length < 8) {
@@ -104,6 +118,18 @@ export function AdminPredictionRow({
           <PointPill label="FT" value={p.ft_pts || 0} />
           <PointPill label="Closest" value={roundPoints(p.closest_pts || 0)} />
           <PointPill label="Outcome" value={p.outcome_pts || 0} />
+          {(p.et_ft_pts || p.et_closest_pts || p.et_outcome_pts) ? (
+            <>
+              <PointPill label="ET" value={p.et_ft_pts || 0} accent="orange" />
+              {(p.et_closest_pts || 0) > 0 && <PointPill label="ET Cls" value={roundPoints(p.et_closest_pts || 0)} accent="orange" />}
+            </>
+          ) : null}
+          {(p.pen_exact_pts || p.pen_closest_pts) ? (
+            <>
+              <PointPill label="Pens" value={p.pen_exact_pts || 0} accent="rose" />
+              {(p.pen_closest_pts || 0) > 0 && <PointPill label="Pen Cls" value={roundPoints(p.pen_closest_pts || 0)} accent="rose" />}
+            </>
+          ) : null}
         </div>
       )}
 
@@ -129,6 +155,42 @@ export function AdminPredictionRow({
           onHome={(v) => updateDraft(row.user.id, 'ft_home', v)}
           onAway={(v) => updateDraft(row.user.id, 'ft_away', v)}
         />
+        {showEtInputs && (
+          <>
+            <AdminScorePair
+              label="ET half time"
+              tone="et"
+              homeLabel={homeAbbr}
+              awayLabel={awayAbbr}
+              homeValue={draft.et_ht_home ?? ''}
+              awayValue={draft.et_ht_away ?? ''}
+              onHome={(v) => updateDraft(row.user.id, 'et_ht_home', v)}
+              onAway={(v) => updateDraft(row.user.id, 'et_ht_away', v)}
+            />
+            <AdminScorePair
+              label="ET full time"
+              tone="et"
+              homeLabel={homeAbbr}
+              awayLabel={awayAbbr}
+              homeValue={draft.et_ft_home ?? ''}
+              awayValue={draft.et_ft_away ?? ''}
+              onHome={(v) => updateDraft(row.user.id, 'et_ft_home', v)}
+              onAway={(v) => updateDraft(row.user.id, 'et_ft_away', v)}
+            />
+          </>
+        )}
+        {showPenInputs && (
+          <AdminScorePair
+            label="Penalties"
+            tone="pen"
+            homeLabel={homeAbbr}
+            awayLabel={awayAbbr}
+            homeValue={draft.pen_home ?? ''}
+            awayValue={draft.pen_away ?? ''}
+            onHome={(v) => updateDraft(row.user.id, 'pen_home', v)}
+            onAway={(v) => updateDraft(row.user.id, 'pen_away', v)}
+          />
+        )}
       </div>
 
       {/* Actions */}
@@ -230,12 +292,17 @@ export function AdminPredictionRow({
   );
 }
 
-function PointPill({ label, value }) {
+function PointPill({ label, value, accent }) {
   const active = value > 0;
+  const activeCls = accent === 'orange'
+    ? 'bg-orange-50 text-orange-700'
+    : accent === 'rose'
+      ? 'bg-rose-50 text-rose-700'
+      : 'bg-blue-50 text-blue-700';
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${
-        active ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-400'
+        active ? activeCls : 'bg-slate-50 text-slate-400'
       }`}
     >
       <span className="uppercase tracking-wide">{label}</span>

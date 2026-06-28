@@ -3,8 +3,8 @@ import { apiRequest } from '@/api';
 import { Notice } from '@/components/feedback/Notice';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useAppData } from '@/app/providers/AppDataContext';
-import { parseScore } from '@/lib/utils/number';
 import { teamName } from '@/features/matches/utils/matchFormatters';
+import { buildPredictionBody } from '@/features/predictions/utils/buildPredictionBody';
 import { AdminMatchPicker } from '../components/AdminMatchPicker';
 import { AdminPageHeader } from '../components/AdminPageHeader';
 import { AdminPredictionsPanel } from '../components/AdminPredictionsPanel';
@@ -58,6 +58,12 @@ export function AdminPage({ onViewStats }) {
             ht_away: row.prediction?.ht_away != null ? String(row.prediction.ht_away) : '',
             ft_home: row.prediction?.ft_home != null ? String(row.prediction.ft_home) : '',
             ft_away: row.prediction?.ft_away != null ? String(row.prediction.ft_away) : '',
+            et_ht_home: row.prediction?.et_ht_home != null ? String(row.prediction.et_ht_home) : '',
+            et_ht_away: row.prediction?.et_ht_away != null ? String(row.prediction.et_ht_away) : '',
+            et_ft_home: row.prediction?.et_ft_home != null ? String(row.prediction.et_ft_home) : '',
+            et_ft_away: row.prediction?.et_ft_away != null ? String(row.prediction.et_ft_away) : '',
+            pen_home: row.prediction?.pen_home != null ? String(row.prediction.pen_home) : '',
+            pen_away: row.prediction?.pen_away != null ? String(row.prediction.pen_away) : '',
           };
         });
         return next;
@@ -80,16 +86,15 @@ export function AdminPage({ onViewStats }) {
 
   async function savePrediction(userId) {
     const match = fixturesById.get(String(selectedMatchId));
-    const draft = drafts[userId] || {};
-    const ftHome = parseScore(draft.ft_home);
-    const ftAway = parseScore(draft.ft_away);
-    const htHome = parseScore(draft.ht_home);
-    const htAway = parseScore(draft.ht_away);
 
     if (!selectedMatchId || !match) {
       setNotice({ type: 'error', message: 'Choose a match first.' });
       return;
     }
+
+    const draft = drafts[userId] || {};
+    const { body, ftHome, ftAway, htHome, htAway } = buildPredictionBody(match, draft);
+
     if (ftHome === null || ftAway === null) {
       setNotice({ type: 'error', message: 'Full-time home and away scores are required.' });
       return;
@@ -102,8 +107,6 @@ export function AdminPage({ onViewStats }) {
     setSavingUserId(userId);
     setNotice(null);
     try {
-      const body = { ft_home: ftHome, ft_away: ftAway };
-      if (htHome !== null && htAway !== null) { body.ht_home = htHome; body.ht_away = htAway; }
       await apiRequest(`/admin/users/${userId}/predict/${selectedMatchId}`, { method: 'POST', token, body });
       await loadAdminPredictions(selectedMatchId);
       setNotice({ type: 'success', message: `Admin prediction saved for ${teamName(match.home)} vs ${teamName(match.away)}.` });

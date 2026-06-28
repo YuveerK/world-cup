@@ -1,5 +1,9 @@
 export function AdminScorePair({ label, tone = 'ft', homeValue, awayValue, onHome, onAway, homeLabel, awayLabel }) {
-  const toneCls = tone === 'ht' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700';
+  const toneCls =
+    tone === 'ht'  ? 'bg-amber-100 text-amber-700' :
+    tone === 'et'  ? 'bg-orange-100 text-orange-700' :
+    tone === 'pen' ? 'bg-rose-100 text-rose-700' :
+    'bg-blue-100 text-blue-700';
 
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
