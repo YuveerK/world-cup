@@ -1,7 +1,11 @@
 import { roundPoints } from '@/lib/utils/number';
 
 export function getPredictionRowTotal(row) {
-  return roundPoints((row.ht_pts || 0) + (row.ft_pts || 0) + (row.closest_pts || 0) + (row.outcome_pts || 0));
+  return roundPoints(
+    (row.ht_pts || 0) + (row.ft_pts || 0) + (row.closest_pts || 0) + (row.outcome_pts || 0) +
+    (row.et_ht_pts || 0) + (row.et_ft_pts || 0) + (row.et_outcome_pts || 0) + (row.et_closest_pts || 0) +
+    (row.pen_exact_pts || 0) + (row.pen_winner_pts || 0) + (row.pen_closest_pts || 0),
+  );
 }
 
 export function sortPredictionRowsByPoints(rows = []) {

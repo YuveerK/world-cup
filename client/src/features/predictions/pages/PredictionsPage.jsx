@@ -5,8 +5,8 @@ import { LoadingPanel } from '@/components/feedback/LoadingPanel';
 import { AuthCard } from '@/features/auth/components/AuthCard';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useAppData } from '@/app/providers/AppDataContext';
-import { parseScore } from '@/lib/utils/number';
 import { teamName } from '@/features/matches/utils/matchFormatters';
+import { buildPredictionBody } from '../utils/buildPredictionBody';
 import { MatchPredictionsSheet } from '../components/MatchPredictionsSheet';
 import { PredictionFixturesPanel } from '../components/PredictionFixturesPanel';
 import { SummaryStrip } from '../components/SummaryStrip';
@@ -158,10 +158,7 @@ export function PredictionsPage({ onViewStats }) {
   async function savePrediction(match) {
     const id = String(match.id);
     const draft = drafts[id] || {};
-    const ftHome = parseScore(draft.ft_home);
-    const ftAway = parseScore(draft.ft_away);
-    const htHome = parseScore(draft.ht_home);
-    const htAway = parseScore(draft.ht_away);
+    const { body, ftHome, ftAway, htHome, htAway } = buildPredictionBody(match, draft);
 
     if (ftHome === null || ftAway === null) {
       setNotice({ type: 'error', message: 'Full-time home and away scores are required.' });
@@ -175,8 +172,6 @@ export function PredictionsPage({ onViewStats }) {
     setSavingMatchId(id);
     setNotice(null);
     try {
-      const body = { ft_home: ftHome, ft_away: ftAway };
-      if (htHome !== null && htAway !== null) { body.ht_home = htHome; body.ht_away = htAway; }
       await apiRequest(`/predictions/${match.id}`, { method: 'POST', token, body });
       await Promise.all([loadPrivateData(), refreshPublic()]);
       setNotice({ type: 'success', message: `${teamName(match.home)} vs ${teamName(match.away)} saved.` });

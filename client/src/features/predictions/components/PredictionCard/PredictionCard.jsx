@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -90,14 +91,15 @@ export function PredictionCard({
   onViewStats,
   onViewPredictions,
 }) {
+  const [attempted, setAttempted] = useState(false);
   const hasPrediction = Boolean(prediction);
   const locked = isPredictionLocked(match);
+  const isKnockout = !match.group && Boolean(match.stage);
   const matchTotal = points
     ? roundPoints(
-        (points.ht_pts || 0) +
-          (points.ft_pts || 0) +
-          (points.closest_pts || 0) +
-          (points.outcome_pts || 0),
+        (points.ht_pts || 0) + (points.ft_pts || 0) + (points.closest_pts || 0) + (points.outcome_pts || 0) +
+        (points.et_ht_pts || 0) + (points.et_ft_pts || 0) + (points.et_outcome_pts || 0) + (points.et_closest_pts || 0) +
+        (points.pen_exact_pts || 0) + (points.pen_winner_pts || 0) + (points.pen_closest_pts || 0),
       )
     : 0;
   const status = displayStatus(match);
@@ -118,7 +120,15 @@ export function PredictionCard({
     ? !numEq(draft.ht_home, prediction.ht_home) ||
       !numEq(draft.ht_away, prediction.ht_away) ||
       !numEq(draft.ft_home, prediction.ft_home) ||
-      !numEq(draft.ft_away, prediction.ft_away)
+      !numEq(draft.ft_away, prediction.ft_away) ||
+      (isKnockout && (
+        !numEq(draft.et_ht_home, prediction.et_ht_home) ||
+        !numEq(draft.et_ht_away, prediction.et_ht_away) ||
+        !numEq(draft.et_ft_home, prediction.et_ft_home) ||
+        !numEq(draft.et_ft_away, prediction.et_ft_away) ||
+        !numEq(draft.pen_home, prediction.pen_home) ||
+        !numEq(draft.pen_away, prediction.pen_away)
+      ))
     : String(draft.ft_home ?? "") !== "" ||
       String(draft.ft_away ?? "") !== "" ||
       String(draft.ht_home ?? "") !== "" ||
@@ -130,6 +140,52 @@ export function PredictionCard({
   const ftEarned = (points?.ft_pts || 0) > 0;
   const outEarned = (points?.outcome_pts || 0) > 0;
   const clsEarned = roundPoints(points?.closest_pts || 0) > 0;
+  const etEarned = (points?.et_ft_pts || 0) > 0;
+  const etClsEarned = roundPoints(points?.et_closest_pts || 0) > 0;
+  const penEarned = (points?.pen_exact_pts || 0) > 0;
+  const penClsEarned = roundPoints(points?.pen_closest_pts || 0) > 0;
+
+  // ET/pen unlock logic for upcoming form
+  const draftHtHome = draft.ht_home === '' || draft.ht_home == null ? null : Number(draft.ht_home);
+  const draftHtAway = draft.ht_away === '' || draft.ht_away == null ? null : Number(draft.ht_away);
+  const draftFtHome = draft.ft_home === '' || draft.ft_home == null ? null : Number(draft.ft_home);
+  const draftFtAway = draft.ft_away === '' || draft.ft_away == null ? null : Number(draft.ft_away);
+  const ftDraw = draftFtHome !== null && draftFtAway !== null && draftFtHome === draftFtAway;
+  const draftEtHtHome = draft.et_ht_home === '' || draft.et_ht_home == null ? null : Number(draft.et_ht_home);
+  const draftEtHtAway = draft.et_ht_away === '' || draft.et_ht_away == null ? null : Number(draft.et_ht_away);
+  const draftEtFtHome = draft.et_ft_home === '' || draft.et_ft_home == null ? null : Number(draft.et_ft_home);
+  const draftEtFtAway = draft.et_ft_away === '' || draft.et_ft_away == null ? null : Number(draft.et_ft_away);
+  const draftPenHome = draft.pen_home === '' || draft.pen_home == null ? null : Number(draft.pen_home);
+  const draftPenAway = draft.pen_away === '' || draft.pen_away == null ? null : Number(draft.pen_away);
+  const etFtDraw = draftEtFtHome !== null && draftEtFtAway !== null && draftEtFtHome === draftEtFtAway;
+  const showEtInputs = isKnockout && ftDraw;
+  const showPenInputs = showEtInputs && etFtDraw;
+
+  // HT cannot exceed FT
+  const htFtErrors = [];
+  if (draftHtHome !== null && draftFtHome !== null && draftHtHome > draftFtHome)
+    htFtErrors.push(`Half time home (${draftHtHome}) can't be more than full time (${draftFtHome})`);
+  if (draftHtAway !== null && draftFtAway !== null && draftHtAway > draftFtAway)
+    htFtErrors.push(`Half time away (${draftHtAway}) can't be more than full time (${draftFtAway})`);
+
+  // Validation errors — ET scores are cumulative (105-min includes 90-min goals)
+  const etErrors = [];
+  if (showEtInputs) {
+    if (draftEtHtHome !== null && draftFtHome !== null && draftEtHtHome < draftFtHome)
+      etErrors.push(`ET half time home (${draftEtHtHome}) can't be less than full time (${draftFtHome}) — scores are cumulative`);
+    if (draftEtHtAway !== null && draftFtAway !== null && draftEtHtAway < draftFtAway)
+      etErrors.push(`ET half time away (${draftEtHtAway}) can't be less than full time (${draftFtAway}) — scores are cumulative`);
+    if (draftEtFtHome !== null && draftEtHtHome !== null && draftEtFtHome < draftEtHtHome)
+      etErrors.push(`ET full time home (${draftEtFtHome}) can't be less than ET half time (${draftEtHtHome})`);
+    if (draftEtFtAway !== null && draftEtHtAway !== null && draftEtFtAway < draftEtHtAway)
+      etErrors.push(`ET full time away (${draftEtFtAway}) can't be less than ET half time (${draftEtHtAway})`);
+  }
+  const penErrors = [];
+  if (showPenInputs && draftPenHome !== null && draftPenAway !== null && draftPenHome === draftPenAway)
+    penErrors.push('Penalty shootout can\'t end in a draw — one team must win');
+  const hasErrors = htFtErrors.length > 0 || etErrors.length > 0 || penErrors.length > 0;
+  const canSave = draftFtHome !== null && draftFtAway !== null;
+  const handle = (field) => (v) => { setAttempted(false); updateDraft(match.id, field, v); };
 
   return (
     <article
@@ -278,30 +334,98 @@ export function PredictionCard({
                 label="Half time"
                 homeValue={draft.ht_home ?? ""}
                 awayValue={draft.ht_away ?? ""}
-                onHome={(v) => updateDraft(match.id, "ht_home", v)}
-                onAway={(v) => updateDraft(match.id, "ht_away", v)}
+                onHome={handle("ht_home")}
+                onAway={handle("ht_away")}
                 disabled={locked}
               />
               <ScoreInputGroup
                 label="Full time"
                 homeValue={draft.ft_home ?? ""}
                 awayValue={draft.ft_away ?? ""}
-                onHome={(v) => updateDraft(match.id, "ft_home", v)}
-                onAway={(v) => updateDraft(match.id, "ft_away", v)}
+                onHome={handle("ft_home")}
+                onAway={handle("ft_away")}
                 required
                 disabled={locked}
               />
             </div>
+            {attempted && htFtErrors.length > 0 && (
+              <div className="w-full space-y-1">
+                {htFtErrors.map((e, i) => (
+                  <p key={i} className="flex items-start gap-1.5 text-[11px] font-medium text-red-600">
+                    <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
+                    {e}
+                  </p>
+                ))}
+              </div>
+            )}
+            {showEtInputs && (
+              <div className="w-full border-t border-slate-200 pt-2">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-orange-500">Extra time</p>
+                <div className="flex w-full items-end justify-between gap-3">
+                  <ScoreInputGroup
+                    label="ET half time"
+                    homeValue={draft.et_ht_home ?? ""}
+                    awayValue={draft.et_ht_away ?? ""}
+                    onHome={handle("et_ht_home")}
+                    onAway={handle("et_ht_away")}
+                    disabled={locked}
+                  />
+                  <ScoreInputGroup
+                    label="ET full time"
+                    homeValue={draft.et_ft_home ?? ""}
+                    awayValue={draft.et_ft_away ?? ""}
+                    onHome={handle("et_ft_home")}
+                    onAway={handle("et_ft_away")}
+                    disabled={locked}
+                  />
+                </div>
+                {attempted && etErrors.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {etErrors.map((e, i) => (
+                      <p key={i} className="flex items-start gap-1.5 text-[11px] font-medium text-red-600">
+                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
+                        {e}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {showPenInputs && (
+              <div className="w-full border-t border-slate-200 pt-2">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-rose-500">Penalties</p>
+                <div className="flex w-full items-end justify-between gap-3">
+                  <ScoreInputGroup
+                    label="Penalty score"
+                    homeValue={draft.pen_home ?? ""}
+                    awayValue={draft.pen_away ?? ""}
+                    onHome={handle("pen_home")}
+                    onAway={handle("pen_away")}
+                    disabled={locked}
+                  />
+                </div>
+                {attempted && penErrors.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {penErrors.map((e, i) => (
+                      <p key={i} className="flex items-start gap-1.5 text-[11px] font-medium text-red-600">
+                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
+                        {e}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <button
               className={`btn h-[38px] w-full ${
                 saving
                   ? "btn-primary"
-                  : isPristine
+                  : isPristine || !canSave
                     ? "border border-slate-200 bg-white text-slate-400"
                     : "btn-primary"
               }`}
-              onClick={() => savePrediction(match)}
-              disabled={saving || isPristine}
+              onClick={() => { setAttempted(true); if (!hasErrors) savePrediction(match); }}
+              disabled={saving || isPristine || !canSave}
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -341,6 +465,16 @@ export function PredictionCard({
                 <span className="font-mono text-sm font-bold tabular-nums text-slate-600">
                   FT {prediction.ft_home}–{prediction.ft_away}
                 </span>
+                {prediction.et_ft_home != null && (
+                  <span className="font-mono text-sm font-bold tabular-nums text-orange-600">
+                    ET {prediction.et_ft_home}–{prediction.et_ft_away}
+                  </span>
+                )}
+                {prediction.pen_home != null && (
+                  <span className="font-mono text-sm font-bold tabular-nums text-rose-600">
+                    Pens {prediction.pen_home}–{prediction.pen_away}
+                  </span>
+                )}
               </div>
               <div className="mt-2">
                 <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
@@ -436,47 +570,66 @@ export function PredictionCard({
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
-                  <span
-                    className={htEarned ? "text-emerald-700" : "text-slate-500"}
-                  >
+                  <span className={htEarned ? "text-emerald-700" : "text-slate-500"}>
                     HT{" "}
                     {prediction.ht_home != null
                       ? `${prediction.ht_home}–${prediction.ht_away}`
                       : "—"}
                   </span>
-                  {points &&
-                    prediction.ht_home != null &&
-                    (htEarned ? (
-                      <CheckCircle2
-                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <XCircle
-                        className="h-3.5 w-3.5 shrink-0 text-rose-300"
-                        aria-hidden="true"
-                      />
-                    ))}
+                  {points && prediction.ht_home != null && (
+                    htEarned
+                      ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                      : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                  )}
                 </span>
                 <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
-                  <span
-                    className={ftEarned ? "text-emerald-700" : "text-slate-500"}
-                  >
+                  <span className={ftEarned ? "text-emerald-700" : "text-slate-500"}>
                     FT {prediction.ft_home}–{prediction.ft_away}
                   </span>
-                  {points &&
-                    (ftEarned ? (
-                      <CheckCircle2
-                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <XCircle
-                        className="h-3.5 w-3.5 shrink-0 text-rose-300"
-                        aria-hidden="true"
-                      />
-                    ))}
+                  {points && (
+                    ftEarned
+                      ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                      : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                  )}
                 </span>
+                {prediction.et_ft_home != null && (
+                  <>
+                    {prediction.et_ht_home != null && (
+                      <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                        <span className={(points?.et_ht_pts || 0) > 0 ? "text-orange-700" : "text-slate-500"}>
+                          ET HT {prediction.et_ht_home}–{prediction.et_ht_away}
+                        </span>
+                        {points && (
+                          (points?.et_ht_pts || 0) > 0
+                            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                            : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                        )}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                      <span className={etEarned ? "text-orange-700" : "text-slate-500"}>
+                        ET FT {prediction.et_ft_home}–{prediction.et_ft_away}
+                      </span>
+                      {points && (
+                        etEarned
+                          ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                          : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                      )}
+                    </span>
+                  </>
+                )}
+                {prediction.pen_home != null && (
+                  <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                    <span className={penEarned ? "text-rose-700" : "text-slate-500"}>
+                      Pens {prediction.pen_home}–{prediction.pen_away}
+                    </span>
+                    {points && (
+                      penEarned
+                        ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                        : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                    )}
+                  </span>
+                )}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span
@@ -487,10 +640,7 @@ export function PredictionCard({
                   }`}
                 >
                   {outEarned && points && (
-                    <CheckCircle2
-                      className="mr-0.5 inline h-2.5 w-2.5"
-                      aria-hidden="true"
-                    />
+                    <CheckCircle2 className="mr-0.5 inline h-2.5 w-2.5" aria-hidden="true" />
                   )}
                   {outcomeLabel(prediction.ft_home, prediction.ft_away)}
                 </span>
@@ -498,6 +648,18 @@ export function PredictionCard({
                   <span className="flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-100">
                     <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
                     Closest
+                  </span>
+                )}
+                {etClsEarned && (
+                  <span className="flex items-center gap-0.5 rounded-md bg-orange-50 px-1.5 py-0.5 text-[11px] font-medium text-orange-700 ring-1 ring-orange-100">
+                    <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
+                    ET Closest
+                  </span>
+                )}
+                {penClsEarned && (
+                  <span className="flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-rose-100">
+                    <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
+                    Pen Closest
                   </span>
                 )}
               </div>

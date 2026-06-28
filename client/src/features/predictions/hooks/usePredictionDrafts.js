@@ -16,6 +16,12 @@ export function usePredictionDrafts(predictions) {
           ht_away: numberOrBlank(p.ht_away),
           ft_home: numberOrBlank(p.ft_home),
           ft_away: numberOrBlank(p.ft_away),
+          et_ht_home: numberOrBlank(p.et_ht_home),
+          et_ht_away: numberOrBlank(p.et_ht_away),
+          et_ft_home: numberOrBlank(p.et_ft_home),
+          et_ft_away: numberOrBlank(p.et_ft_away),
+          pen_home: numberOrBlank(p.pen_home),
+          pen_away: numberOrBlank(p.pen_away),
         };
       });
       return next;
