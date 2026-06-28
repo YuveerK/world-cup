@@ -13,6 +13,7 @@ import { ProfilePage } from '@/features/account/pages/ProfilePage';
 import { CardPreviewPage } from '@/dev/CardPreviewPage';
 import { StandingsPage } from '@/features/standings/pages/StandingsPage';
 import { KnockoutPage } from '@/features/knockout/pages/KnockoutPage';
+import { RoadToFinalPage } from '@/features/knockout/pages/RoadToFinalPage';
 import { MapPage } from '@/features/map/pages/MapPage';
 import { useAuth } from '@/app/providers/AuthContext';
 
@@ -60,6 +61,10 @@ function AppRoutes() {
         <Route
           path="/knockout"
           element={authGuard(<main className={MAIN}><KnockoutPage /></main>)}
+        />
+        <Route
+          path="/road-to-final"
+          element={authGuard(<main className={MAIN}><RoadToFinalPage /></main>)}
         />
         <Route
           path="/map"
