@@ -145,21 +145,21 @@ export function PredictionCard({
   const penEarned = (points?.pen_exact_pts || 0) > 0;
   const penClsEarned = roundPoints(points?.pen_closest_pts || 0) > 0;
 
-  // ET/pen unlock logic for upcoming form
+  // Draft values for validation
   const draftHtHome = draft.ht_home === '' || draft.ht_home == null ? null : Number(draft.ht_home);
   const draftHtAway = draft.ht_away === '' || draft.ht_away == null ? null : Number(draft.ht_away);
   const draftFtHome = draft.ft_home === '' || draft.ft_home == null ? null : Number(draft.ft_home);
   const draftFtAway = draft.ft_away === '' || draft.ft_away == null ? null : Number(draft.ft_away);
-  const ftDraw = draftFtHome !== null && draftFtAway !== null && draftFtHome === draftFtAway;
   const draftEtHtHome = draft.et_ht_home === '' || draft.et_ht_home == null ? null : Number(draft.et_ht_home);
   const draftEtHtAway = draft.et_ht_away === '' || draft.et_ht_away == null ? null : Number(draft.et_ht_away);
   const draftEtFtHome = draft.et_ft_home === '' || draft.et_ft_home == null ? null : Number(draft.et_ft_home);
   const draftEtFtAway = draft.et_ft_away === '' || draft.et_ft_away == null ? null : Number(draft.et_ft_away);
   const draftPenHome = draft.pen_home === '' || draft.pen_home == null ? null : Number(draft.pen_home);
   const draftPenAway = draft.pen_away === '' || draft.pen_away == null ? null : Number(draft.pen_away);
-  const etFtDraw = draftEtFtHome !== null && draftEtFtAway !== null && draftEtFtHome === draftEtFtAway;
-  const showEtInputs = isKnockout && ftDraw;
-  const showPenInputs = showEtInputs && etFtDraw;
+  // ET and penalty inputs always visible for knockout matches — scoring engine decides
+  // whether to use them based on the actual result (ignored if FT is not a draw).
+  const showEtInputs = isKnockout;
+  const showPenInputs = isKnockout;
 
   // HT cannot exceed FT
   const htFtErrors = [];

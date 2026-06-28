@@ -11,31 +11,16 @@ export function buildPredictionBody(match, draft) {
   const body = { ft_home: ftHome, ft_away: ftAway };
   if (htHome !== null && htAway !== null) { body.ht_home = htHome; body.ht_away = htAway; }
 
-  const ftIsDraw = ftHome !== null && ftAway !== null && ftHome === ftAway;
-  if (isKnockout && ftIsDraw) {
+  if (isKnockout) {
     const etFtHome = parseScore(draft.et_ft_home);
     const etFtAway = parseScore(draft.et_ft_away);
     const etHtHome = parseScore(draft.et_ht_home);
     const etHtAway = parseScore(draft.et_ht_away);
-
-    if (etFtHome !== null && etFtAway !== null) {
-      body.et_ft_home = etFtHome;
-      body.et_ft_away = etFtAway;
-    }
-    if (etHtHome !== null && etHtAway !== null) {
-      body.et_ht_home = etHtHome;
-      body.et_ht_away = etHtAway;
-    }
-
-    const etFtIsDraw = etFtHome !== null && etFtAway !== null && etFtHome === etFtAway;
-    if (etFtIsDraw) {
-      const penHome = parseScore(draft.pen_home);
-      const penAway = parseScore(draft.pen_away);
-      if (penHome !== null && penAway !== null) {
-        body.pen_home = penHome;
-        body.pen_away = penAway;
-      }
-    }
+    if (etFtHome !== null && etFtAway !== null) { body.et_ft_home = etFtHome; body.et_ft_away = etFtAway; }
+    if (etHtHome !== null && etHtAway !== null) { body.et_ht_home = etHtHome; body.et_ht_away = etHtAway; }
+    const penHome = parseScore(draft.pen_home);
+    const penAway = parseScore(draft.pen_away);
+    if (penHome !== null && penAway !== null) { body.pen_home = penHome; body.pen_away = penAway; }
   }
 
   return { body, ftHome, ftAway, htHome, htAway };

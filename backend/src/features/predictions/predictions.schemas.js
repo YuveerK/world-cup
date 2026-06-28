@@ -37,9 +37,6 @@ function validateSubmitPrediction(req) {
     if ((et_ft_home === null) !== (et_ft_away === null)) {
       throw new ValidationError('Provide both et_ft_home and et_ft_away, or neither');
     }
-    if (ft_home !== ft_away) {
-      throw new ValidationError('ET predictions are only allowed when FT is predicted as a draw');
-    }
     if ([et_ft_home, et_ft_away].some((v) => Number.isNaN(v) || v < 0)) {
       throw new ValidationError('ET scores must be non-negative integers');
     }
@@ -71,9 +68,6 @@ function validateSubmitPrediction(req) {
   if (pen_home !== null || pen_away !== null) {
     if ((pen_home === null) !== (pen_away === null)) {
       throw new ValidationError('Provide both pen_home and pen_away, or neither');
-    }
-    if (et_ft_home === null || et_ft_home !== et_ft_away) {
-      throw new ValidationError('Penalty predictions are only allowed when ET FT is predicted as a draw');
     }
     if ([pen_home, pen_away].some((v) => Number.isNaN(v) || v < 0)) {
       throw new ValidationError('Penalty scores must be non-negative integers');
