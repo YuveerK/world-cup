@@ -64,6 +64,21 @@ function firstHalfEndScore(timeline) {
   return eventScore(firstHalfEnd || {});
 }
 
+// Returns the score at the end of a given period using the timeline's End Time events.
+// Period 3 = HT (45 min), Period 5 = FT (90 min), Period 7 = ET HT (105 min), Period 9 = ET FT (120 min).
+// Uses TypeLocalized 'End Time' as the primary signal — confirmed present in 2022 World Cup Final timeline.
+function getPeriodEndScore(timeline, period) {
+  const events = timeline?.Event || [];
+  const endEvent = [...events].reverse().find((e) => {
+    if (Number(e.Period) !== period) return false;
+    const typeDesc = e.TypeLocalized?.[0]?.Description ?? '';
+    if (typeDesc === 'End Time') return true;
+    const desc = eventDescription(e);
+    return desc.includes('end') || desc.includes('brings') || desc.includes('blows');
+  });
+  return eventScore(endEvent || {});
+}
+
 function inferHalfTimeFromTimeline(timeline) {
   const events = timeline?.Event || [];
   const ended = firstHalfEndScore(timeline);
@@ -84,14 +99,24 @@ function getHalfTimeScore(live, timeline, { allowTimelineFallback = true } = {})
   );
 }
 
-async function checkTournamentWinner(live, ftHome, ftAway) {
+// Bug Fix 2: accept ET and penalty data to determine the true match winner.
+// The final can go to ET/pens, in which case ftHome === ftAway (draw at 90 min).
+async function checkTournamentWinner(live, ftHome, ftAway, etFtScore, penHome, penAway) {
   const stageName = (live.StageName?.[0]?.Description || '').toLowerCase();
   if (!stageName.includes('final')) return;
   if (stageName.includes('third') || stageName.includes('3rd') || stageName.includes('semi')) return;
 
   const homeTeam = live.HomeTeam?.TeamName?.[0]?.Description || live.HomeTeam?.ShortClubName;
   const awayTeam = live.AwayTeam?.TeamName?.[0]?.Description || live.AwayTeam?.ShortClubName;
-  const winner = ftHome > ftAway ? homeTeam : ftAway > ftHome ? awayTeam : null;
+
+  let winner = null;
+  if (penHome !== null && penAway !== null) {
+    winner = penHome > penAway ? homeTeam : penAway > penHome ? awayTeam : null;
+  } else if (etFtScore) {
+    winner = etFtScore.home > etFtScore.away ? homeTeam : etFtScore.away > etFtScore.home ? awayTeam : null;
+  } else {
+    winner = ftHome > ftAway ? homeTeam : ftAway > ftHome ? awayTeam : null;
+  }
   if (!winner) return;
 
   await usersRepo.updateWinnerPts(winner, 25);
@@ -115,16 +140,26 @@ async function scoreFromFifa(match) {
     return;
   }
 
-  // Period 4 is the half-time interval — the match is not over even if the FIFA calendar
-  // has already marked it finished (can happen during weather suspensions where the API
-  // returns inconsistent status codes across calls).
-  if (Number(live.Period) === 4) {
-    logger.info(`Match ${matchId} is still at half-time (period 4) — skipping scoring`);
+  // Period 4 = regular HT interval, Period 6 = ET HT interval — match not yet over.
+  if (Number(live.Period) === 4 || Number(live.Period) === 6) {
+    logger.info(`Match ${matchId} is at half-time interval (period ${live.Period}) — skipping scoring`);
     return;
   }
 
-  const ftHome = live.HomeTeam?.Score ?? null;
-  const ftAway = live.AwayTeam?.Score ?? null;
+  // Extract the authoritative 90-min score from the timeline (Period 5 end event).
+  // live.HomeTeam.Score is the 120-min score for ET matches — do NOT use it as FT.
+  const ftFromTimeline = getPeriodEndScore(timeline, 5);
+  let ftHome, ftAway;
+
+  if (ftFromTimeline) {
+    ftHome = ftFromTimeline.home;
+    ftAway = ftFromTimeline.away;
+  } else {
+    // Fallback for matches with no ET (Period <= 5 at full time): live score is 90-min score.
+    ftHome = live.HomeTeam?.Score ?? null;
+    ftAway = live.AwayTeam?.Score ?? null;
+  }
+
   if (ftHome === null || ftAway === null) return;
 
   if ([0, 1].includes(live.MatchStatus) && ftHome === 0 && ftAway === 0 && !isLongPastKickoff(match)) {
@@ -133,8 +168,24 @@ async function scoreFromFifa(match) {
   }
 
   const ht = getHalfTimeScore(live, timeline);
-  await scoreFromData(matchId, ftHome, ftAway, ht?.home ?? null, ht?.away ?? null);
-  await checkTournamentWinner(live, ftHome, ftAway);
+
+  // ET scores from timeline Period 7 (ET HT, 105 min) and Period 9 (ET FT, 120 min).
+  const etHtScore = getPeriodEndScore(timeline, 7);
+  const etFtScore = getPeriodEndScore(timeline, 9);
+
+  // Penalty scores already provided directly by the live endpoint.
+  const penHome = live.HomeTeamPenaltyScore != null ? Number(live.HomeTeamPenaltyScore) : null;
+  const penAway = live.AwayTeamPenaltyScore != null ? Number(live.AwayTeamPenaltyScore) : null;
+
+  await scoreFromData(
+    matchId,
+    ftHome, ftAway,
+    ht?.home ?? null, ht?.away ?? null,
+    etHtScore?.home ?? null, etHtScore?.away ?? null,
+    etFtScore?.home ?? null, etFtScore?.away ?? null,
+    penHome, penAway,
+  );
+  await checkTournamentWinner(live, ftHome, ftAway, etFtScore, penHome, penAway);
 }
 
 async function scoreLiveMatch(match) {
@@ -181,11 +232,11 @@ async function checkAndScoreFinishedMatches() {
     const results = data.Results || [];
 
     const liveMatches = results.filter((m) => m.MatchStatus === 3);
-    // Exclude matches still at Period 4 (the half-time interval) even when the calendar
-    // marks them as finished — this happens during weather suspensions where FIFA's API
-    // intermittently flips between finished and delay status codes.
+    // Exclude matches at Period 4 (regular HT interval) or Period 6 (ET HT interval)
+    // even when the calendar marks them as finished — this happens during weather
+    // suspensions where FIFA's API intermittently flips status codes.
     const officiallyFinished = results.filter(
-      (m) => [2, 4, 5].includes(m.MatchStatus) && Number(m.Period) !== 4
+      (m) => [2, 4, 5].includes(m.MatchStatus) && Number(m.Period) !== 4 && Number(m.Period) !== 6
     );
     const inferredFinished = results.filter(
       (m) =>
@@ -211,13 +262,16 @@ async function checkAndScoreFinishedMatches() {
         .map((r) => normalizeId(r.match_id))
     );
 
-    // For officially finished matches: re-score if the stored FT doesn't match the calendar
-    // score (handles cases where a match was incorrectly scored while suspended).
+    // For officially finished matches: re-score if the stored result doesn't match the
+    // calendar score (handles cases where a match was incorrectly scored while suspended).
+    // Bug Fix 1: the calendar's HomeTeamScore is the 120-min score for ET matches, so
+    // compare against et_ft_home when available, not ft_home (the 90-min score).
     function needsRescoring(match) {
       const stored = scoredMap.get(normalizeId(match.IdMatch));
       if (!stored || stored.ht_home == null || stored.ht_away == null) return true;
-      return Number(stored.ft_home) !== match.HomeTeamScore ||
-             Number(stored.ft_away) !== match.AwayTeamScore;
+      const refHome = stored.et_ft_home != null ? stored.et_ft_home : stored.ft_home;
+      const refAway = stored.et_ft_away != null ? stored.et_ft_away : stored.ft_away;
+      return Number(refHome) !== match.HomeTeamScore || Number(refAway) !== match.AwayTeamScore;
     }
 
     const toScore = [
