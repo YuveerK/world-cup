@@ -19,6 +19,11 @@ export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) 
   const submissionStats = useMemo(() => getSubmissionStats(rows), [rows]);
   const hasScored = hasScoredPredictionRows(rows);
 
+  // Show ET/pen columns when the actual result has those scores OR when any
+  // player has made an ET/pen prediction (upcoming knockout matches).
+  const showEt = actualResult?.et_ft_home != null || rows.some((r) => r.et_ft_home != null);
+  const showPen = actualResult?.pen_home != null || rows.some((r) => r.pen_home != null);
+
   return (
     <div className="space-y-3">
       {(actualResult || submissionStats) && (
@@ -29,12 +34,16 @@ export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) 
         currentUser={currentUser}
         actualResult={actualResult}
         hasScored={hasScored}
+        showEt={showEt}
+        showPen={showPen}
       />
       <DesktopPredictionsTable
         rows={sorted}
         currentUser={currentUser}
         actualResult={actualResult}
         hasScored={hasScored}
+        showEt={showEt}
+        showPen={showPen}
       />
     </div>
   );
@@ -49,7 +58,7 @@ function MatchContextHeader({ actualResult, submissionStats }) {
         <div className={`flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 ${submissionStats ? 'border-b border-slate-100' : ''}`}>
           <div>
             <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-400">Result</p>
-            <div className="mt-1 flex items-center gap-3">
+            <div className="mt-1 flex flex-wrap items-center gap-3">
               {actualResult.ht_home != null && (
                 <>
                   <span className="text-base font-black tabular-nums text-slate-900">
@@ -64,6 +73,22 @@ function MatchContextHeader({ actualResult, submissionStats }) {
               <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100">
                 {outcomeLabel(actualResult.ft_home, actualResult.ft_away)}
               </span>
+              {actualResult.et_ft_home != null && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-base font-black tabular-nums text-orange-700">
+                    ET {actualResult.et_ft_home}–{actualResult.et_ft_away}
+                  </span>
+                </>
+              )}
+              {actualResult.pen_home != null && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-base font-black tabular-nums text-rose-700">
+                    Pens {actualResult.pen_home}–{actualResult.pen_away}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -88,7 +113,7 @@ function MatchContextHeader({ actualResult, submissionStats }) {
 
 // ─── Mobile cards ─────────────────────────────────────────────────────────────
 
-function MobilePredictionCards({ rows, currentUser, actualResult, hasScored }) {
+function MobilePredictionCards({ rows, currentUser, actualResult, hasScored, showEt, showPen }) {
   return (
     <div className="space-y-2 sm:hidden">
       {rows.map((row, index) => (
@@ -99,13 +124,15 @@ function MobilePredictionCards({ rows, currentUser, actualResult, hasScored }) {
           currentUser={currentUser}
           actualResult={actualResult}
           hasScored={hasScored}
+          showEt={showEt}
+          showPen={showPen}
         />
       ))}
     </div>
   );
 }
 
-function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored }) {
+function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored, showEt, showPen }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
@@ -114,6 +141,10 @@ function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored 
   const ftEarned = (row.ft_pts || 0) > 0;
   const outEarned = (row.outcome_pts || 0) > 0;
   const clsEarned = roundPoints(row.closest_pts || 0) > 0;
+  const etEarned = (row.et_ft_pts || 0) > 0;
+  const etClsEarned = roundPoints(row.et_closest_pts || 0) > 0;
+  const penEarned = (row.pen_exact_pts || 0) > 0;
+  const penClsEarned = roundPoints(row.pen_closest_pts || 0) > 0;
 
   return (
     <div className={`overflow-hidden rounded-xl border ${isYou ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200 bg-white'}`}>
@@ -155,6 +186,28 @@ function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored 
               points={row.ft_pts}
               hasPrediction
             />
+            {row.et_ft_home != null && (
+              <MobileScoreCell
+                label="ET Full Time"
+                pick={scorePair(row.et_ft_home, row.et_ft_away)}
+                earned={etEarned}
+                hasScored={hasScored}
+                points={row.et_ft_pts}
+                hasPrediction
+                accent="orange"
+              />
+            )}
+            {row.pen_home != null && (
+              <MobileScoreCell
+                label="Penalties"
+                pick={scorePair(row.pen_home, row.pen_away)}
+                earned={penEarned}
+                hasScored={hasScored}
+                points={row.pen_exact_pts}
+                hasPrediction
+                accent="rose"
+              />
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -168,10 +221,33 @@ function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored 
                 {outcomeLabel(row.ft_home, row.ft_away)}
               </span>
             )}
+            {/* Unscored ET/pen prediction indicators */}
+            {!hasScored && row.et_ft_home != null && (
+              <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600 ring-1 ring-orange-100">
+                ET {row.et_ft_home}–{row.et_ft_away}
+              </span>
+            )}
+            {!hasScored && row.pen_home != null && (
+              <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-600 ring-1 ring-rose-100">
+                Pens {row.pen_home}–{row.pen_away}
+              </span>
+            )}
             {clsEarned && (
               <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
                 <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
                 Closest +{roundPoints(row.closest_pts)}
+              </span>
+            )}
+            {etClsEarned && (
+              <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-100">
+                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
+                ET Cls +{roundPoints(row.et_closest_pts)}
+              </span>
+            )}
+            {penClsEarned && (
+              <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100">
+                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
+                Pen Cls +{roundPoints(row.pen_closest_pts)}
               </span>
             )}
             {submitted && (
@@ -187,10 +263,12 @@ function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored 
   );
 }
 
-function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction }) {
+function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction, accent }) {
   const missed = !earned && hasScored && hasPrediction;
-  const labelCls = earned && hasScored ? 'text-emerald-500' : 'text-slate-400';
-  const valueCls = earned && hasScored ? 'text-emerald-700' : missed ? 'text-slate-600' : hasPrediction ? 'text-slate-700' : 'text-slate-300';
+  const accentColor = accent === 'orange' ? 'text-orange-500' : accent === 'rose' ? 'text-rose-500' : 'text-emerald-500';
+  const accentText = accent === 'orange' ? 'text-orange-700' : accent === 'rose' ? 'text-rose-700' : 'text-emerald-700';
+  const labelCls = earned && hasScored ? accentColor : 'text-slate-400';
+  const valueCls = earned && hasScored ? accentText : missed ? 'text-slate-600' : hasPrediction ? 'text-slate-700' : 'text-slate-300';
 
   return (
     <div className="rounded-lg bg-slate-50 px-2.5 py-2 ring-1 ring-slate-100">
@@ -199,7 +277,7 @@ function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction
         {pick ?? EMPTY}
       </p>
       {hasScored && earned && (
-        <p className="mt-1 text-[10px] font-bold text-emerald-600">+{points} pts</p>
+        <p className={`mt-1 text-[10px] font-bold ${accentText}`}>+{points} pts</p>
       )}
     </div>
   );
@@ -207,7 +285,8 @@ function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction
 
 // ─── Desktop table ────────────────────────────────────────────────────────────
 
-function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored }) {
+function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored, showEt, showPen }) {
+
   return (
     <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:block">
       <table className="w-full text-sm">
@@ -219,6 +298,8 @@ function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored })
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Time</th>
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Closest</th>
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Outcome</th>
+            {showEt && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-orange-400">{actualResult?.et_ft_home != null ? 'ET FT' : 'ET (pred)'}</th>}
+            {showPen && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-rose-400">{actualResult?.pen_home != null ? 'Pens' : 'Pens (pred)'}</th>}
             <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Placed</th>
             <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Total</th>
           </tr>
@@ -232,6 +313,8 @@ function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored })
               currentUser={currentUser}
               actualResult={actualResult}
               hasScored={hasScored}
+              showEt={showEt}
+              showPen={showPen}
             />
           ))}
         </tbody>
@@ -240,12 +323,14 @@ function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored })
   );
 }
 
-function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored }) {
+function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored, showEt, showPen }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
   const htEarned = (row.ht_pts || 0) > 0;
   const ftEarned = (row.ft_pts || 0) > 0;
+  const etEarned = (row.et_ft_pts || 0) > 0;
+  const penEarned = (row.pen_exact_pts || 0) > 0;
 
   return (
     <tr className={`transition-colors ${isYou ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}>
@@ -282,6 +367,30 @@ function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored 
       </td>
       <td className="px-3 py-3 text-center">{ptsCell(roundPoints(row.closest_pts || 0))}</td>
       <td className="px-3 py-3 text-center">{ptsCell(row.outcome_pts || 0)}</td>
+      {showEt && (
+        <td className="px-3 py-3 text-center">
+          <PickCell
+            pick={scorePair(row.et_ft_home, row.et_ft_away)}
+            actual={scorePair(actualResult?.et_ft_home, actualResult?.et_ft_away)}
+            earned={etEarned}
+            pts={row.et_ft_pts}
+            hasScored={hasScored}
+            hasPick={row.et_ft_home != null}
+          />
+        </td>
+      )}
+      {showPen && (
+        <td className="px-3 py-3 text-center">
+          <PickCell
+            pick={scorePair(row.pen_home, row.pen_away)}
+            actual={scorePair(actualResult?.pen_home, actualResult?.pen_away)}
+            earned={penEarned}
+            pts={row.pen_exact_pts}
+            hasScored={hasScored}
+            hasPick={row.pen_home != null}
+          />
+        </td>
+      )}
       <td className="whitespace-nowrap px-4 py-3 text-right text-[10px] text-slate-400">
         {formatPlacedAt(row.submitted_at) ?? EMPTY}
       </td>

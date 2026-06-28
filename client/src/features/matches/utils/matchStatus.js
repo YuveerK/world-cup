@@ -51,7 +51,10 @@ export function scoreStatusLabel(match) {
     const minute = formatMatchMinute(match.minute);
     return minute ? `Live ${minute}` : 'Live';
   }
-  if (status === 'FINISHED') return 'FT';
+  if (status === 'FINISHED') {
+    if (match.score?.homePenalty != null) return 'Pens';
+    return 'FT';
+  }
   if (status === 'SUSPENDED') return 'Suspended';
   if (status === 'ABANDONED') return 'Abandoned';
   if (status === 'CANCELLED') return 'Cancelled';
