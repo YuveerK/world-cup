@@ -19,8 +19,8 @@ async function getPredictionsForMatch(matchId) {
   const [{ data: users, error: usersErr }, { data: predictions, error: predsErr }, { data: points, error: ptsErr }] =
     await Promise.all([
       supabase.from('users').select('id, username, pick1, pick2, is_admin, created_at').order('username'),
-      supabase.from('predictions').select('user_id, match_id, ht_home, ht_away, ft_home, ft_away, submitted_at').eq('match_id', id),
-      supabase.from('points').select('user_id, match_id, ht_pts, ft_pts, closest_pts, outcome_pts').eq('match_id', id),
+      supabase.from('predictions').select('user_id, match_id, ht_home, ht_away, ft_home, ft_away, et_ht_home, et_ht_away, et_ft_home, et_ft_away, pen_home, pen_away, submitted_at').eq('match_id', id),
+      supabase.from('points').select('user_id, match_id, ht_pts, ft_pts, closest_pts, outcome_pts, et_ht_pts, et_ft_pts, et_outcome_pts, et_closest_pts, pen_exact_pts, pen_winner_pts, pen_closest_pts').eq('match_id', id),
     ]);
   if (usersErr) throw usersErr;
   if (predsErr) throw predsErr;
@@ -28,10 +28,10 @@ async function getPredictionsForMatch(matchId) {
 
   const predByUser = new Map((predictions || []).map((p) => [p.user_id, p]));
   const ptsByUser = new Map((points || []).map((p) => [p.user_id, p]));
-  const rows = (users || []).map((user) => ({
-    user,
-    prediction: predByUser.get(user.id) || null,
-    points: ptsByUser.get(user.id) || null,
+  const rows = (users || []).map((u) => ({
+    user: u,
+    prediction: predByUser.get(u.id) || null,
+    points: ptsByUser.get(u.id) || null,
   }));
   return { matchId: id, rows };
 }
@@ -76,25 +76,33 @@ async function deleteUser(userId, requestingAdminId) {
 }
 
 async function setUserPrediction(userId, matchId, scores) {
-  const { ft_home, ft_away, ht_home, ht_away } = scores;
+  const { ft_home, ft_away, ht_home, ht_away, et_ht_home, et_ht_away, et_ft_home, et_ft_away, pen_home, pen_away } = scores;
   const id = String(matchId);
   const { error } = await supabase
     .from('predictions')
     .upsert(
-      { user_id: userId, match_id: id, ht_home, ht_away, ft_home, ft_away, submitted_at: new Date().toISOString() },
+      { user_id: userId, match_id: id, ht_home, ht_away, ft_home, ft_away, et_ht_home, et_ht_away, et_ft_home, et_ft_away, pen_home, pen_away, submitted_at: new Date().toISOString() },
       { onConflict: 'user_id,match_id' }
     );
   if (error) throw error;
 
   const result = await scoringRepo.findResult(id);
   if (result && result.ht_home != null && result.ht_away != null) {
-    await scoreFromData(id, result.ft_home, result.ft_away, result.ht_home, result.ht_away);
+    await scoreFromData(
+      id, result.ft_home, result.ft_away, result.ht_home, result.ht_away,
+      result.et_ht_home, result.et_ht_away, result.et_ft_home, result.et_ft_away,
+      result.pen_home, result.pen_away,
+    );
     return { scored: true };
   }
 
   const scored = await tryScoreById(id);
   if (!scored && result) {
-    await scoreFromData(id, result.ft_home, result.ft_away, result.ht_home, result.ht_away);
+    await scoreFromData(
+      id, result.ft_home, result.ft_away, result.ht_home, result.ht_away,
+      result.et_ht_home, result.et_ht_away, result.et_ft_home, result.et_ft_away,
+      result.pen_home, result.pen_away,
+    );
     return { scored: true, partialResult: true };
   }
   return { scored };
