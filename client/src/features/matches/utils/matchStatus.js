@@ -13,14 +13,18 @@ export function isPastMatch(match) {
 
 export function isHalfTime(match) {
   const minute = String(match?.minute ?? '').trim();
-  const period = Number(match?.period);
+  const rawPeriod = match?.period;
+  const period = Number(rawPeriod);
+  const hasPeriod = rawPeriod !== undefined && rawPeriod !== null && rawPeriod !== '' && Number.isFinite(period);
+
+  if (period === FIFA_PERIODS.PRE_ET_INTERVAL) return false;
 
   return Boolean(
     match?.isHalfTime ||
     match?.phase === 'HALF_TIME' ||
     period === FIFA_PERIODS.REGULAR_HT || period === FIFA_PERIODS.ET_HT ||
     minute.toUpperCase() === 'HT' ||
-    (match?.status === 'LIVE' && minute === '' && hasMatchScore(match))
+    (match?.status === 'LIVE' && minute === '' && hasMatchScore(match) && !hasPeriod)
   );
 }
 
@@ -49,11 +53,17 @@ export function displayStatus(match) {
 export function scoreStatusLabel(match) {
   const status = displayStatus(match);
   if (status === 'LIVE') {
-    if (isHalfTime(match)) return 'HT';
     const period = Number(match.period);
-    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF;
+    // A live penalty score is the strongest phase signal — check before any period
+    // logic so a stale/lagging period can't mislabel a shootout as half-time.
+    if (period === FIFA_PERIODS.PENALTIES || match.score?.homePenalty != null) return 'Pens';
+    if (period === FIFA_PERIODS.PRE_ET_INTERVAL) return 'ET next';
+    // Ignore a stale REGULAR_HT period once the match has reached extra time.
+    const staleRegularHt = period === FIFA_PERIODS.REGULAR_HT && Boolean(match.aet);
+    if (isHalfTime(match) && !staleRegularHt) return 'HT';
+    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF || staleRegularHt;
     const minute = formatMatchMinute(match.minute);
-    return minute ? `${isEt ? 'ET' : 'Live'} ${minute}` : (isEt ? 'ET' : 'Live');
+    return minute && !staleRegularHt ? `${isEt ? 'ET' : 'Live'} ${minute}` : (isEt ? 'ET' : 'Live');
   }
   if (status === 'FINISHED') {
     if (match.score?.homePenalty != null) return 'Pens';
@@ -70,11 +80,17 @@ export function scoreStatusLabel(match) {
 export function statusPillLabel(match) {
   const status = displayStatus(match);
   if (status === 'LIVE') {
-    if (isHalfTime(match)) return 'Half time';
     const period = Number(match.period);
-    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF;
+    // A live penalty score is the strongest phase signal — check before any period
+    // logic so a stale/lagging period can't mislabel a shootout as half-time.
+    if (period === FIFA_PERIODS.PENALTIES || match.score?.homePenalty != null) return 'Penalties';
+    if (period === FIFA_PERIODS.PRE_ET_INTERVAL) return 'Extra time next';
+    // Ignore a stale REGULAR_HT period once the match has reached extra time.
+    const staleRegularHt = period === FIFA_PERIODS.REGULAR_HT && Boolean(match.aet);
+    if (isHalfTime(match) && !staleRegularHt) return 'Half time';
+    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF || staleRegularHt;
     const minute = formatMatchMinute(match.minute);
-    return minute ? `${isEt ? 'ET' : 'Live'} · ${minute}` : (isEt ? 'Extra Time' : 'Live');
+    return minute && !staleRegularHt ? `${isEt ? 'ET' : 'Live'} · ${minute}` : (isEt ? 'Extra Time' : 'Live');
   }
   if (status === 'FINISHED') {
     if (match.score?.homePenalty != null) return 'Penalties';
@@ -90,7 +106,7 @@ export function statusPillLabel(match) {
 
 export function scoreText(match) {
   if (!hasMatchScore(match)) return null;
-  return `${match.score.home} - ${match.score.away}`;
+  return `${match.score.home}–${match.score.away}`;
 }
 
 export function canShowMatchDetails(match) {

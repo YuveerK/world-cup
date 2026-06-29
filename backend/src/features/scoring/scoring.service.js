@@ -52,6 +52,46 @@ async function scoreFromData(
   return { scored: preds.length, pointsRows: rows };
 }
 
+// Live extra-time scoring. Mirrors the regular half-time approach: award points for
+// whichever ET phase is already confirmed without touching any non-ET points.
+//   - etHt present (ET first half ended)  → award ET half-time exact only.
+//   - etFt present (ET full time confirmed, e.g. during penalties) → award the full
+//     ET package (HT/FT/outcome/closest) exactly like the final scoring pass.
+// Only ET-predictors (et_ft_home != null) are scored, matching scoreFromData.
+async function scoreEtProgressFromData(matchId, etHt, etFt) {
+  const id = repo.normalizeId(matchId);
+  const preds = await repo.getPredictionsForMatch(id);
+  if (!preds.length) return { scored: 0 };
+
+  const etPreds = preds.filter((p) => p.et_ft_home != null);
+  if (!etPreds.length) return { scored: 0 };
+
+  let rows;
+  if (etFt) {
+    const etActual = {
+      htHome: etHt ? etHt.home : null,
+      htAway: etHt ? etHt.away : null,
+      ftHome: etFt.home,
+      ftAway: etFt.away,
+    };
+    rows = rules.scoreEtPredictions(etPreds, etActual).map((r) => ({ ...r, match_id: id }));
+  } else if (etHt) {
+    rows = etPreds.map((p) => ({
+      user_id: p.user_id,
+      match_id: id,
+      et_ht_pts: p.et_ht_home != null && p.et_ht_home === etHt.home && p.et_ht_away === etHt.away
+        ? rules.ET_HT_EXACT_PTS
+        : 0,
+    }));
+  } else {
+    return { scored: 0 };
+  }
+
+  if (rows.length) await repo.upsertPoints(rows);
+  logger.info(`Live ET scored match ${id} (${etFt ? `FT ${etFt.home}-${etFt.away}` : `HT ${etHt.home}-${etHt.away}`}), ${rows.length} predictions processed`);
+  return { scored: rows.length, pointsRows: rows };
+}
+
 // Score only the half-time portion while preserving existing FT/outcome/closest.
 async function scoreHalfTimeFromData(matchId, htHome, htAway) {
   const id = repo.normalizeId(matchId);
@@ -69,4 +109,4 @@ async function scoreHalfTimeFromData(matchId, htHome, htAway) {
   return { scored: preds.length, pointsRows: rows };
 }
 
-module.exports = { scoreFromData, scoreHalfTimeFromData };
+module.exports = { scoreFromData, scoreHalfTimeFromData, scoreEtProgressFromData };

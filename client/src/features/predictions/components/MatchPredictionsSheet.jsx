@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { AlertCircle, Eye, Loader2, X } from 'lucide-react';
 import { Flag } from '@/features/matches/components/Flag';
-import { displayStatus, hasMatchScore, scoreText } from '@/features/matches/utils/matchStatus';
+import { displayStatus, hasMatchScore, scoreText, statusPillLabel } from '@/features/matches/utils/matchStatus';
 import { matchTitle, teamName } from '@/features/matches/utils/matchFormatters';
 import { MatchPredictionsTable } from './MatchPredictionsTable';
 
@@ -78,26 +78,33 @@ function SheetHeader({ match, onClose }) {
 
 function MatchSummary({ match }) {
   const status = displayStatus(match);
+  const location = [match?.stadium, match?.city].filter(Boolean).join(', ');
 
   return (
-    <div className="mb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-      <div className="flex flex-col items-center gap-1.5">
-        <Flag team={match.home} />
-        <p className="line-clamp-2 text-center text-xs font-bold text-slate-900">{teamName(match.home)}</p>
+    <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-1.5 pl-0.5 sm:gap-2">
+          <Flag team={match.home} />
+          <p className="truncate text-sm font-black text-slate-900">{teamName(match.home)}</p>
+        </div>
+        <div className="text-center">
+          {hasMatchScore(match) ? (
+            <p className="text-2xl font-black tabular-nums text-slate-950 sm:text-3xl">{scoreText(match)}</p>
+          ) : (
+            <p className="text-base font-black uppercase text-slate-400">VS</p>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-row-reverse items-center gap-1.5 pr-0.5 text-right sm:gap-2">
+          <Flag team={match.away} />
+          <p className="truncate text-sm font-black text-slate-900">{teamName(match.away)}</p>
+        </div>
       </div>
-      <div className="text-center">
-        {hasMatchScore(match) ? (
-          <p className="text-3xl font-black tabular-nums text-slate-950">{scoreText(match)}</p>
-        ) : (
-          <p className="text-base font-black uppercase text-slate-400">VS</p>
-        )}
-        <p className={`mt-1 text-[10px] font-bold uppercase tracking-wide ${getStatusClass(status)}`}>
-          {status}
-        </p>
-      </div>
-      <div className="flex flex-col items-center gap-1.5">
-        <Flag team={match.away} />
-        <p className="line-clamp-2 text-center text-xs font-bold text-slate-900">{teamName(match.away)}</p>
+      <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] font-semibold text-slate-500">
+        <span className={`rounded-full px-2 py-0.5 ${getStatusClass(status)}`}>
+          {statusPillLabel(match)}
+        </span>
+        {match.stage && <span>{match.stage}</span>}
+        {location && <span>{location}</span>}
       </div>
     </div>
   );
@@ -139,6 +146,7 @@ function SheetContent({ match, rows, currentUser, actualResult, loading, error }
 
   return (
     <MatchPredictionsTable
+      match={match}
       rows={rows}
       currentUser={currentUser}
       actualResult={actualResult}
@@ -147,7 +155,7 @@ function SheetContent({ match, rows, currentUser, actualResult, loading, error }
 }
 
 function getStatusClass(status) {
-  if (status === 'FINISHED') return 'text-blue-600';
-  if (status === 'LIVE') return 'text-red-600';
-  return 'text-amber-600';
+  if (status === 'FINISHED') return 'bg-blue-50 text-blue-600 ring-1 ring-blue-100';
+  if (status === 'LIVE') return 'bg-rose-50 text-rose-600 ring-1 ring-rose-100';
+  return 'bg-amber-50 text-amber-600 ring-1 ring-amber-100';
 }

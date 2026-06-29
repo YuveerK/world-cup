@@ -5,7 +5,7 @@ const logger = require('../../shared/logging/logger');
 const { FINISHED_AFTER_MS } = require('../../config/constants');
 const { FIFA_PERIODS } = require('../../config/fifaPeriods');
 const usersRepo = require('../users/users.repository');
-const { scoreFromData, scoreHalfTimeFromData } = require('./scoring.service');
+const { scoreFromData, scoreHalfTimeFromData, scoreEtProgressFromData } = require('./scoring.service');
 const repo = require('./scoring.repository');
 
 function isLongPastKickoff(match) {
@@ -225,8 +225,22 @@ async function scoreLiveMatch(match) {
   }
 
   const ht = getHalfTimeScore(live, timeline, { allowTimelineFallback: false });
-  if (!ht) return { scored: 0 };
-  return scoreHalfTimeFromData(matchId, ht.home, ht.away);
+  if (ht) {
+    await scoreHalfTimeFromData(matchId, ht.home, ht.away);
+  }
+
+  // Live extra-time scoring — mirrors regular half-time. The presence of a period-end
+  // score in the timeline is itself the "phase confirmed" signal:
+  //   ET_FIRST_HALF end  → ET half time is final (award ET HT now).
+  //   ET_SECOND_HALF end → ET full time is final (award the full ET package). While the
+  //     match is still LIVE this only happens during the penalty shootout.
+  const etHt = getPeriodEndScore(timeline, FIFA_PERIODS.ET_FIRST_HALF);
+  const etFt = getPeriodEndScore(timeline, FIFA_PERIODS.ET_SECOND_HALF);
+  if (etHt || etFt) {
+    await scoreEtProgressFromData(matchId, etHt, etFt);
+  }
+
+  return { scored: ht ? 1 : 0 };
 }
 
 // Try to score a match by its ID — returns true if scoring was attempted.
