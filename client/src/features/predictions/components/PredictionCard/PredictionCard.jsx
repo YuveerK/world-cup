@@ -168,22 +168,10 @@ export function PredictionCard({
   if (draftHtAway !== null && draftFtAway !== null && draftHtAway > draftFtAway)
     htFtErrors.push(`Half time away (${draftHtAway}) can't be more than full time (${draftFtAway})`);
 
-  // Validation errors — ET scores are cumulative (105-min includes 90-min goals)
-  const etErrors = [];
-  if (showEtInputs) {
-    if (draftEtHtHome !== null && draftFtHome !== null && draftEtHtHome < draftFtHome)
-      etErrors.push(`ET half time home (${draftEtHtHome}) can't be less than full time (${draftFtHome}) — scores are cumulative`);
-    if (draftEtHtAway !== null && draftFtAway !== null && draftEtHtAway < draftFtAway)
-      etErrors.push(`ET half time away (${draftEtHtAway}) can't be less than full time (${draftFtAway}) — scores are cumulative`);
-    if (draftEtFtHome !== null && draftEtHtHome !== null && draftEtFtHome < draftEtHtHome)
-      etErrors.push(`ET full time home (${draftEtFtHome}) can't be less than ET half time (${draftEtHtHome})`);
-    if (draftEtFtAway !== null && draftEtHtAway !== null && draftEtFtAway < draftEtHtAway)
-      etErrors.push(`ET full time away (${draftEtFtAway}) can't be less than ET half time (${draftEtHtAway})`);
-  }
   const penErrors = [];
   if (showPenInputs && draftPenHome !== null && draftPenAway !== null && draftPenHome === draftPenAway)
     penErrors.push('Penalty shootout can\'t end in a draw — one team must win');
-  const hasErrors = htFtErrors.length > 0 || etErrors.length > 0 || penErrors.length > 0;
+  const hasErrors = htFtErrors.length > 0 || penErrors.length > 0;
   const canSave = draftFtHome !== null && draftFtAway !== null;
   const handle = (field) => (v) => { setAttempted(false); updateDraft(match.id, field, v); };
 
@@ -344,7 +332,6 @@ export function PredictionCard({
                 awayValue={draft.ft_away ?? ""}
                 onHome={handle("ft_home")}
                 onAway={handle("ft_away")}
-                required
                 disabled={locked}
               />
             </div>
@@ -360,7 +347,8 @@ export function PredictionCard({
             )}
             {showEtInputs && (
               <div className="w-full border-t border-slate-200 pt-2">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-orange-500">Extra time</p>
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Extra time</p>
+                <p className="mb-2 text-[10px] text-slate-400">Predict in case the match reaches this stage</p>
                 <div className="flex w-full items-end justify-between gap-3">
                   <ScoreInputGroup
                     label="ET half time"
@@ -379,22 +367,13 @@ export function PredictionCard({
                     disabled={locked}
                   />
                 </div>
-                {attempted && etErrors.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {etErrors.map((e, i) => (
-                      <p key={i} className="flex items-start gap-1.5 text-[11px] font-medium text-red-600">
-                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
-                        {e}
-                      </p>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
             {showPenInputs && (
               <div className="w-full border-t border-slate-200 pt-2">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-rose-500">Penalties</p>
-                <div className="flex w-full items-end justify-between gap-3">
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Penalties</p>
+                <p className="mb-2 text-[10px] text-slate-400">Predict in case the match reaches this stage</p>
+                <div className="flex w-full items-end justify-center gap-3">
                   <ScoreInputGroup
                     label="Penalty score"
                     homeValue={draft.pen_home ?? ""}
@@ -568,7 +547,8 @@ export function PredictionCard({
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Your prediction
               </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                {/* Row 1: HT + FT */}
                 <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
                   <span className={htEarned ? "text-emerald-700" : "text-slate-500"}>
                     HT{" "}
@@ -592,20 +572,19 @@ export function PredictionCard({
                       : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
                   )}
                 </span>
-                {prediction.et_ft_home != null && (
+                {/* Row 2: ET HT + ET FT */}
+                {prediction.et_ft_home != null && prediction.et_ht_home != null && (
                   <>
-                    {prediction.et_ht_home != null && (
-                      <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
-                        <span className={(points?.et_ht_pts || 0) > 0 ? "text-orange-700" : "text-slate-500"}>
-                          ET HT {prediction.et_ht_home}–{prediction.et_ht_away}
-                        </span>
-                        {points && (
-                          (points?.et_ht_pts || 0) > 0
-                            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
-                            : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
-                        )}
+                    <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                      <span className={(points?.et_ht_pts || 0) > 0 ? "text-orange-700" : "text-slate-500"}>
+                        ET HT {prediction.et_ht_home}–{prediction.et_ht_away}
                       </span>
-                    )}
+                      {points && (
+                        (points?.et_ht_pts || 0) > 0
+                          ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                          : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                      )}
+                    </span>
                     <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
                       <span className={etEarned ? "text-orange-700" : "text-slate-500"}>
                         ET FT {prediction.et_ft_home}–{prediction.et_ft_away}
@@ -618,8 +597,21 @@ export function PredictionCard({
                     </span>
                   </>
                 )}
+                {prediction.et_ft_home != null && prediction.et_ht_home == null && (
+                  <span className="col-span-2 flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                    <span className={etEarned ? "text-orange-700" : "text-slate-500"}>
+                      ET FT {prediction.et_ft_home}–{prediction.et_ft_away}
+                    </span>
+                    {points && (
+                      etEarned
+                        ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                        : <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
+                    )}
+                  </span>
+                )}
+                {/* Pens: full width */}
                 {prediction.pen_home != null && (
-                  <span className="flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
+                  <span className="col-span-2 flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums">
                     <span className={penEarned ? "text-rose-700" : "text-slate-500"}>
                       Pens {prediction.pen_home}–{prediction.pen_away}
                     </span>
@@ -633,9 +625,9 @@ export function PredictionCard({
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
                     outEarned && points
-                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                      ? "bg-violet-100 text-violet-700 ring-1 ring-violet-300"
                       : "bg-slate-100 text-slate-500"
                   }`}
                 >
@@ -645,19 +637,19 @@ export function PredictionCard({
                   {outcomeLabel(prediction.ft_home, prediction.ft_away)}
                 </span>
                 {clsEarned && (
-                  <span className="flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-300">
                     <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
                     Closest
                   </span>
                 )}
                 {etClsEarned && (
-                  <span className="flex items-center gap-0.5 rounded-md bg-orange-50 px-1.5 py-0.5 text-[11px] font-medium text-orange-700 ring-1 ring-orange-100">
+                  <span className="flex items-center gap-0.5 rounded-md bg-orange-100 px-1.5 py-0.5 text-[11px] font-semibold text-orange-700 ring-1 ring-orange-300">
                     <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
                     ET Closest
                   </span>
                 )}
                 {penClsEarned && (
-                  <span className="flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-rose-100">
+                  <span className="flex items-center gap-0.5 rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-300">
                     <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
                     Pen Closest
                   </span>
