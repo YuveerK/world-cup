@@ -18,6 +18,16 @@ const BASE = {
   away: AWAY,
 };
 
+// Knockout: no group, has stage → ET/pen fields always visible
+const KO_BASE = {
+  stage: 'Round of 32',
+  stadium: 'MetLife Stadium',
+  city: 'New York',
+  country: 'USA',
+  home: HOME,
+  away: AWAY,
+};
+
 const SCENARIOS = [
   {
     label: 'Upcoming — no prediction yet',
@@ -84,6 +94,43 @@ const SCENARIOS = [
     points: { ht_pts: 0, ft_pts: 0, closest_pts: 0, outcome_pts: 0 },
     draft: { ht_home: '0', ht_away: '2', ft_home: '0', ft_away: '3' },
   },
+
+  // ── Knockout scenarios ────────────────────────────────────────────────────
+  {
+    label: 'Knockout — upcoming, no prediction yet',
+    match: { ...KO_BASE, id: 'k1', date: FUTURE, status: 'UPCOMING', score: {} },
+    prediction: null,
+    points: null,
+    draft: { ht_home: '', ht_away: '', ft_home: '', ft_away: '', et_ht_home: '', et_ht_away: '', et_ft_home: '', et_ft_away: '', pen_home: '', pen_away: '' },
+  },
+  {
+    label: 'Knockout — upcoming, all fields filled (saved)',
+    match: { ...KO_BASE, id: 'k2', date: FUTURE, status: 'UPCOMING', score: {} },
+    prediction: { ht_home: 0, ht_away: 0, ft_home: 1, ft_away: 1, et_ht_home: 2, et_ht_away: 1, et_ft_home: 2, et_ft_away: 2, pen_home: 4, pen_away: 3 },
+    points: null,
+    draft: { ht_home: '0', ht_away: '0', ft_home: '1', ft_away: '1', et_ht_home: '2', et_ht_away: '1', et_ft_home: '2', et_ft_away: '2', pen_home: '4', pen_away: '3' },
+  },
+  {
+    label: 'Knockout — finished, went to ET (home won in ET)',
+    match: { ...KO_BASE, id: 'k3', date: PAST, status: 'FINISHED', period: 9, score: { home: 2, away: 1 } },
+    prediction: { ht_home: 0, ht_away: 0, ft_home: 1, ft_away: 1, et_ht_home: 2, et_ht_away: 1, et_ft_home: 2, et_ft_away: 1, pen_home: null, pen_away: null },
+    points: { ht_pts: 5, ft_pts: 10, closest_pts: 3, outcome_pts: 4, et_ht_pts: 3, et_ft_pts: 6, et_outcome_pts: 3, et_closest_pts: 4, pen_exact_pts: 0, pen_winner_pts: 0, pen_closest_pts: 0 },
+    draft: { ht_home: '0', ht_away: '0', ft_home: '1', ft_away: '1', et_ht_home: '2', et_ht_away: '1', et_ft_home: '2', et_ft_away: '1', pen_home: '', pen_away: '' },
+  },
+  {
+    label: 'Knockout — finished, went to penalties (4-3)',
+    match: { ...KO_BASE, id: 'k4', date: PAST, status: 'FINISHED', period: 9, score: { home: 1, away: 1, homePenalty: 4, awayPenalty: 3 } },
+    prediction: { ht_home: 0, ht_away: 0, ft_home: 1, ft_away: 1, et_ht_home: 2, et_ht_away: 1, et_ft_home: 2, et_ft_away: 2, pen_home: 4, pen_away: 3 },
+    points: { ht_pts: 5, ft_pts: 10, closest_pts: 3, outcome_pts: 4, et_ht_pts: 3, et_ft_pts: 6, et_outcome_pts: 3, et_closest_pts: 4, pen_exact_pts: 5, pen_winner_pts: 3, pen_closest_pts: 4 },
+    draft: { ht_home: '0', ht_away: '0', ft_home: '1', ft_away: '1', et_ht_home: '2', et_ht_away: '1', et_ft_home: '2', et_ft_away: '2', pen_home: '4', pen_away: '3' },
+  },
+  {
+    label: 'Knockout — finished, ended at FT (ET/pen predictions ignored)',
+    match: { ...KO_BASE, id: 'k5', date: PAST, status: 'FINISHED', score: { home: 2, away: 1 } },
+    prediction: { ht_home: 1, ht_away: 0, ft_home: 2, ft_away: 1, et_ht_home: 3, et_ht_away: 1, et_ft_home: 3, et_ft_away: 2, pen_home: 5, pen_away: 4 },
+    points: { ht_pts: 5, ft_pts: 10, closest_pts: 3, outcome_pts: 4, et_ht_pts: 0, et_ft_pts: 0, et_outcome_pts: 0, et_closest_pts: 0, pen_exact_pts: 0, pen_winner_pts: 0, pen_closest_pts: 0 },
+    draft: { ht_home: '1', ht_away: '0', ft_home: '2', ft_away: '1', et_ht_home: '3', et_ht_away: '1', et_ft_home: '3', et_ft_away: '2', pen_home: '5', pen_away: '4' },
+  },
 ];
 
 export function CardPreviewPage() {
@@ -104,7 +151,7 @@ export function CardPreviewPage() {
         <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500">Dev only</p>
         <h1 className="mt-1 text-2xl font-black text-slate-900">PredictionCard states</h1>
         <p className="mt-1 text-sm text-slate-500">
-          All 9 lifecycle states. The top 3 upcoming cards have live inputs — try editing them.
+          All lifecycle states including knockout ET/pen scenarios. Upcoming cards have live inputs — try editing them.
         </p>
       </div>
 

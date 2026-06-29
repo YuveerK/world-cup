@@ -53,6 +53,7 @@ export function scoreStatusLabel(match) {
   }
   if (status === 'FINISHED') {
     if (match.score?.homePenalty != null) return 'Pens';
+    if (Number(match.period) === 9 || Number(match.period) === 10) return 'AET';
     return 'FT';
   }
   if (status === 'SUSPENDED') return 'Suspended';
@@ -69,7 +70,11 @@ export function statusPillLabel(match) {
     const minute = formatMatchMinute(match.minute);
     return minute ? `Live · ${minute}` : 'Live';
   }
-  if (status === 'FINISHED') return 'Full Time';
+  if (status === 'FINISHED') {
+    if (match.score?.homePenalty != null) return 'Penalties';
+    if (Number(match.period) === 9 || Number(match.period) === 10) return 'After ET';
+    return 'Full Time';
+  }
   if (status === 'SUSPENDED') return 'Suspended';
   if (status === 'ABANDONED') return 'Abandoned';
   if (status === 'CANCELLED') return 'Cancelled';
