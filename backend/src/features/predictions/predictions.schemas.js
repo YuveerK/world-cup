@@ -40,10 +40,6 @@ function validateSubmitPrediction(req) {
     if ([et_ft_home, et_ft_away].some((v) => Number.isNaN(v) || v < 0)) {
       throw new ValidationError('ET scores must be non-negative integers');
     }
-    // ET FT is cumulative — must be >= FT scores
-    if (et_ft_home < ft_home || et_ft_away < ft_away) {
-      throw new ValidationError('ET full time scores must be >= full time scores (ET is cumulative)');
-    }
   }
   if (et_ht_home !== null || et_ht_away !== null) {
     if ((et_ht_home === null) !== (et_ht_away === null)) {
@@ -51,14 +47,6 @@ function validateSubmitPrediction(req) {
     }
     if ([et_ht_home, et_ht_away].some((v) => Number.isNaN(v) || v < 0)) {
       throw new ValidationError('ET HT scores must be non-negative integers');
-    }
-    // ET HT is cumulative — must be >= FT scores
-    if (et_ht_home < ft_home || et_ht_away < ft_away) {
-      throw new ValidationError('ET half time scores must be >= full time scores (ET is cumulative)');
-    }
-    // ET FT must also be >= ET HT when both provided
-    if (et_ft_home !== null && (et_ft_home < et_ht_home || et_ft_away < et_ht_away)) {
-      throw new ValidationError('ET full time scores must be >= ET half time scores');
     }
   }
 

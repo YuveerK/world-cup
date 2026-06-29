@@ -155,7 +155,21 @@ async function scoreFromFifa(match) {
     ftHome = ftFromTimeline.home;
     ftAway = ftFromTimeline.away;
   } else {
-    // Fallback for matches with no ET (Period <= 5 at full time): live score is 90-min score.
+    // Before falling back to live.HomeTeam.Score, check whether the match went to ET.
+    // For ET matches the live score is the 120-min cumulative total — using it as FT
+    // would score everyone's 90-min predictions against the wrong number.
+    const matchWentToEt = getPeriodEndScore(timeline, 7) ||
+                          getPeriodEndScore(timeline, 9) ||
+                          live.HomeTeamPenaltyScore != null;
+    if (matchWentToEt) {
+      logger.warn(
+        `Match ${matchId} went to extra time but the timeline has no Period 5 end event — ` +
+        `cannot safely determine the 90-min FT score. Auto-scoring skipped. ` +
+        `Please set the result manually via the admin panel.`
+      );
+      return;
+    }
+    // Safe fallback: no ET detected, so live.HomeTeam.Score is the 90-min score.
     ftHome = live.HomeTeam?.Score ?? null;
     ftAway = live.AwayTeam?.Score ?? null;
   }
