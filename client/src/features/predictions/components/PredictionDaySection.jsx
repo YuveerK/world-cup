@@ -35,7 +35,7 @@ export function PredictionDaySection({
         <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         {group.matches.map((match) => (
           <PredictionCard
             key={match.id}

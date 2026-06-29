@@ -25,6 +25,7 @@ import {
   canShowMatchDetails,
   statusPillLabel,
 } from "@/features/matches/utils/matchStatus";
+import { FIFA_PERIODS } from "@/features/matches/utils/fifaPeriods";
 import { outcomeLabel } from "@/features/matches/utils/matchFormatters";
 
 function formatCountdown(matchDate) {
@@ -78,6 +79,46 @@ function formatMatchLocation(match) {
       return true;
     })
     .join(", ");
+}
+
+function LivePhaseRow({ label, pick, state, pts, liveScore }) {
+  const active  = state === 'active';
+  const earned  = state === 'earned';
+  const missed  = state === 'missed';
+
+  const labelCls = earned ? 'text-emerald-600' : active ? 'text-amber-600' : 'text-slate-400';
+  const pickCls  = earned ? 'text-emerald-700' : active ? 'text-amber-700' : missed ? 'text-slate-500' : 'text-slate-400';
+
+  return (
+    <div className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-2">
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${labelCls}`}>{label}</span>
+      <span className={`font-mono text-sm font-bold tabular-nums ${pickCls}`}>{pick}</span>
+      <span className="flex items-center gap-1">
+        {active && liveScore && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+            </span>
+            {liveScore}
+          </span>
+        )}
+        {active && !liveScore && (
+          <span className="text-[11px] font-medium text-amber-500">live</span>
+        )}
+        {earned && (
+          <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-600">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+            {pts != null && pts > 0 ? `+${pts}` : ''}
+          </span>
+        )}
+        {missed && <XCircle className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />}
+        {!active && !earned && !missed && (
+          <span className="text-xs text-slate-300">—</span>
+        )}
+      </span>
+    </div>
+  );
 }
 
 export function PredictionCard({
@@ -144,6 +185,17 @@ export function PredictionCard({
   const etClsEarned = roundPoints(points?.et_closest_pts || 0) > 0;
   const penEarned = (points?.pen_exact_pts || 0) > 0;
   const penClsEarned = roundPoints(points?.pen_closest_pts || 0) > 0;
+
+  // Live phase matrix
+  const htScored = points?.ht_pts != null;
+  const isAtHalfTime = match.phase === 'HALF_TIME' || Number(match.period) === FIFA_PERIODS.REGULAR_HT;
+  const htPhaseState = htScored ? (htEarned ? 'earned' : 'missed') : isAtHalfTime ? 'active' : 'awaiting';
+  const htLiveScore = !htScored && isAtHalfTime && hasMatchScore(match) ? `${match.score.home}–${match.score.away}` : null;
+  const ftPhaseState = isAtHalfTime ? 'awaiting' : 'active';
+  const ftLiveScore = !isAtHalfTime && hasMatchScore(match) ? `${match.score.home}–${match.score.away}` : null;
+  const livePredOutcome = hasPrediction ? outcomeLabel(Number(prediction.ft_home), Number(prediction.ft_away)) : null;
+  const liveCurrentOutcome = hasMatchScore(match) ? outcomeLabel(Number(match.score.home), Number(match.score.away)) : null;
+  const outcomeOnTrack = isLive && !isAtHalfTime && livePredOutcome !== null && livePredOutcome === liveCurrentOutcome;
 
   // Draft values for validation
   const draftHtHome = draft.ht_home === '' || draft.ht_home == null ? null : Number(draft.ht_home);
@@ -425,40 +477,62 @@ export function PredictionCard({
         </div>
       )}
 
-      {/* ── LIVE: spectator summary + hero pts badge ── */}
+      {/* ── LIVE: phase matrix ── */}
       {isLive && hasPrediction && (
         <div className="border-t border-rose-100 bg-rose-50/30 px-4 py-4 sm:px-5">
-          <div className="flex items-center gap-4">
-            {/* Left: locked prediction (no ✓/✗ — match still in progress) */}
+          <div className="flex items-start gap-4">
+            {/* Left: phase matrix */}
             <div className="min-w-0 flex-1">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Your prediction
               </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <span className="font-mono text-sm font-bold tabular-nums text-slate-600">
-                  HT{" "}
-                  {prediction.ht_home != null
-                    ? `${prediction.ht_home}–${prediction.ht_away}`
-                    : "—"}
-                </span>
-                <span className="font-mono text-sm font-bold tabular-nums text-slate-600">
-                  FT {prediction.ft_home}–{prediction.ft_away}
-                </span>
+              <div className="space-y-1.5">
+                <LivePhaseRow
+                  label="HT"
+                  pick={prediction.ht_home != null ? `${prediction.ht_home}–${prediction.ht_away}` : "—"}
+                  state={htPhaseState}
+                  pts={htEarned ? points.ht_pts : null}
+                  liveScore={htLiveScore}
+                />
+                <LivePhaseRow
+                  label="FT"
+                  pick={`${prediction.ft_home}–${prediction.ft_away}`}
+                  state={ftPhaseState}
+                  liveScore={ftLiveScore}
+                />
+                {prediction.et_ht_home != null && (
+                  <LivePhaseRow
+                    label="ET HT"
+                    pick={`${prediction.et_ht_home}–${prediction.et_ht_away}`}
+                    state="awaiting"
+                  />
+                )}
                 {prediction.et_ft_home != null && (
-                  <span className="font-mono text-sm font-bold tabular-nums text-orange-600">
-                    ET {prediction.et_ft_home}–{prediction.et_ft_away}
-                  </span>
+                  <LivePhaseRow
+                    label="ET FT"
+                    pick={`${prediction.et_ft_home}–${prediction.et_ft_away}`}
+                    state="awaiting"
+                  />
                 )}
                 {prediction.pen_home != null && (
-                  <span className="font-mono text-sm font-bold tabular-nums text-rose-600">
-                    Pens {prediction.pen_home}–{prediction.pen_away}
-                  </span>
+                  <LivePhaseRow
+                    label="Pens"
+                    pick={`${prediction.pen_home}–${prediction.pen_away}`}
+                    state="awaiting"
+                  />
                 )}
               </div>
-              <div className="mt-2">
-                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
+              <div className="mt-3 flex items-center gap-1.5">
+                <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
+                  outcomeOnTrack
+                    ? "bg-amber-100 text-amber-700 ring-1 ring-amber-300"
+                    : "bg-slate-100 text-slate-500"
+                }`}>
                   {outcomeLabel(prediction.ft_home, prediction.ft_away)}
                 </span>
+                {outcomeOnTrack && (
+                  <span className="text-[10px] font-medium text-amber-600">on track</span>
+                )}
               </div>
             </div>
 

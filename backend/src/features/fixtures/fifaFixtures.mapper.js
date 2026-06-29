@@ -1,6 +1,7 @@
 'use strict';
 
 const { COMPETITION, SEASON } = require('../../config/constants');
+const { FIFA_PERIODS } = require('../../config/fifaPeriods');
 
 const MATCH_STATUS = {
   0: 'TBD',
@@ -35,7 +36,7 @@ function isHalfTimePayload(match) {
     (match?.HomeTeam?.Score ?? match?.HomeTeamScore) != null &&
     (match?.AwayTeam?.Score ?? match?.AwayTeamScore) != null;
   return (
-    period === 4 ||
+    period === FIFA_PERIODS.REGULAR_HT || period === FIFA_PERIODS.ET_HT ||
     time === 'HT' ||
     time === 'HALF TIME' ||
     time === 'HALFTIME' ||
@@ -71,7 +72,7 @@ function placeholder(ph) {
   return { name: ph || 'TBD', abbreviation: 'TBD', countryCode: null, flagUrl: null, score: null, penaltyScore: null };
 }
 
-function mapMatch(m, live = null) {
+function mapMatch(m, live = null, etMatchIds = null) {
   const home = mapTeam(live?.HomeTeam || m.Home || m.HomeTeam);
   const away = mapTeam(live?.AwayTeam || m.Away || m.AwayTeam);
   const status = mapStatus(m, live);
@@ -99,6 +100,7 @@ function mapMatch(m, live = null) {
           awayPenalty: live?.AwayTeamPenaltyScore ?? m.AwayTeamPenaltyScore ?? null,
         }
       : null,
+    aet: etMatchIds ? etMatchIds.has(String(m.IdMatch)) : false,
     stage: locale(m.StageName),
     group: locale(m.GroupName),
     stadium: m.Stadium ? locale(m.Stadium.Name) : null,

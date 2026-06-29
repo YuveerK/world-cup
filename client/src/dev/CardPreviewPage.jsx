@@ -112,14 +112,14 @@ const SCENARIOS = [
   },
   {
     label: 'Knockout — finished, went to ET (home won in ET)',
-    match: { ...KO_BASE, id: 'k3', date: PAST, status: 'FINISHED', period: 9, score: { home: 2, away: 1 } },
+    match: { ...KO_BASE, id: 'k3', date: PAST, status: 'FINISHED', aet: true, score: { home: 2, away: 1 } },
     prediction: { ht_home: 0, ht_away: 0, ft_home: 1, ft_away: 1, et_ht_home: 2, et_ht_away: 1, et_ft_home: 2, et_ft_away: 1, pen_home: null, pen_away: null },
     points: { ht_pts: 5, ft_pts: 10, closest_pts: 3, outcome_pts: 4, et_ht_pts: 3, et_ft_pts: 6, et_outcome_pts: 3, et_closest_pts: 4, pen_exact_pts: 0, pen_winner_pts: 0, pen_closest_pts: 0 },
     draft: { ht_home: '0', ht_away: '0', ft_home: '1', ft_away: '1', et_ht_home: '2', et_ht_away: '1', et_ft_home: '2', et_ft_away: '1', pen_home: '', pen_away: '' },
   },
   {
     label: 'Knockout — finished, went to penalties (4-3)',
-    match: { ...KO_BASE, id: 'k4', date: PAST, status: 'FINISHED', period: 9, score: { home: 1, away: 1, homePenalty: 4, awayPenalty: 3 } },
+    match: { ...KO_BASE, id: 'k4', date: PAST, status: 'FINISHED', aet: true, score: { home: 1, away: 1, homePenalty: 4, awayPenalty: 3 } },
     prediction: { ht_home: 0, ht_away: 0, ft_home: 1, ft_away: 1, et_ht_home: 2, et_ht_away: 1, et_ft_home: 2, et_ft_away: 2, pen_home: 4, pen_away: 3 },
     points: { ht_pts: 5, ft_pts: 10, closest_pts: 3, outcome_pts: 4, et_ht_pts: 3, et_ft_pts: 6, et_outcome_pts: 3, et_closest_pts: 4, pen_exact_pts: 5, pen_winner_pts: 3, pen_closest_pts: 4 },
     draft: { ht_home: '0', ht_away: '0', ft_home: '1', ft_away: '1', et_ht_home: '2', et_ht_away: '1', et_ft_home: '2', et_ft_away: '2', pen_home: '4', pen_away: '3' },
@@ -155,7 +155,7 @@ export function CardPreviewPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid items-start gap-8 lg:grid-cols-2">
         {SCENARIOS.map((scenario) => (
           <div key={scenario.match.id}>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">

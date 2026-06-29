@@ -1,3 +1,5 @@
+import { FIFA_PERIODS } from './fifaPeriods';
+
 export function hasMatchScore(match) {
   const home = Number(match?.score?.home);
   const away = Number(match?.score?.away);
@@ -16,7 +18,7 @@ export function isHalfTime(match) {
   return Boolean(
     match?.isHalfTime ||
     match?.phase === 'HALF_TIME' ||
-    period === 4 ||
+    period === FIFA_PERIODS.REGULAR_HT || period === FIFA_PERIODS.ET_HT ||
     minute.toUpperCase() === 'HT' ||
     (match?.status === 'LIVE' && minute === '' && hasMatchScore(match))
   );
@@ -48,12 +50,14 @@ export function scoreStatusLabel(match) {
   const status = displayStatus(match);
   if (status === 'LIVE') {
     if (isHalfTime(match)) return 'HT';
+    const period = Number(match.period);
+    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF;
     const minute = formatMatchMinute(match.minute);
-    return minute ? `Live ${minute}` : 'Live';
+    return minute ? `${isEt ? 'ET' : 'Live'} ${minute}` : (isEt ? 'ET' : 'Live');
   }
   if (status === 'FINISHED') {
     if (match.score?.homePenalty != null) return 'Pens';
-    if (Number(match.period) === 9 || Number(match.period) === 10) return 'AET';
+    if (match.aet) return 'AET';
     return 'FT';
   }
   if (status === 'SUSPENDED') return 'Suspended';
@@ -67,12 +71,14 @@ export function statusPillLabel(match) {
   const status = displayStatus(match);
   if (status === 'LIVE') {
     if (isHalfTime(match)) return 'Half time';
+    const period = Number(match.period);
+    const isEt = period === FIFA_PERIODS.ET_FIRST_HALF || period === FIFA_PERIODS.ET_SECOND_HALF;
     const minute = formatMatchMinute(match.minute);
-    return minute ? `Live · ${minute}` : 'Live';
+    return minute ? `${isEt ? 'ET' : 'Live'} · ${minute}` : (isEt ? 'Extra Time' : 'Live');
   }
   if (status === 'FINISHED') {
     if (match.score?.homePenalty != null) return 'Penalties';
-    if (Number(match.period) === 9 || Number(match.period) === 10) return 'After ET';
+    if (match.aet) return 'After ET';
     return 'Full Time';
   }
   if (status === 'SUSPENDED') return 'Suspended';

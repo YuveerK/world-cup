@@ -22,6 +22,7 @@ export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) 
   // Show ET/pen columns when the actual result has those scores OR when any
   // player has made an ET/pen prediction (upcoming knockout matches).
   const showEt = actualResult?.et_ft_home != null || rows.some((r) => r.et_ft_home != null);
+  const showEtHt = showEt && (actualResult?.et_ht_home != null || rows.some((r) => r.et_ht_home != null));
   const showPen = actualResult?.pen_home != null || rows.some((r) => r.pen_home != null);
 
   return (
@@ -34,8 +35,6 @@ export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) 
         currentUser={currentUser}
         actualResult={actualResult}
         hasScored={hasScored}
-        showEt={showEt}
-        showPen={showPen}
       />
       <DesktopPredictionsTable
         rows={sorted}
@@ -43,6 +42,7 @@ export function MatchPredictionsTable({ rows = [], currentUser, actualResult }) 
         actualResult={actualResult}
         hasScored={hasScored}
         showEt={showEt}
+        showEtHt={showEtHt}
         showPen={showPen}
       />
     </div>
@@ -113,7 +113,7 @@ function MatchContextHeader({ actualResult, submissionStats }) {
 
 // ─── Mobile cards ─────────────────────────────────────────────────────────────
 
-function MobilePredictionCards({ rows, currentUser, actualResult, hasScored, showEt, showPen }) {
+function MobilePredictionCards({ rows, currentUser, actualResult, hasScored }) {
   return (
     <div className="space-y-2 sm:hidden">
       {rows.map((row, index) => (
@@ -124,160 +124,103 @@ function MobilePredictionCards({ rows, currentUser, actualResult, hasScored, sho
           currentUser={currentUser}
           actualResult={actualResult}
           hasScored={hasScored}
-          showEt={showEt}
-          showPen={showPen}
         />
       ))}
     </div>
   );
 }
 
-function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored, showEt, showPen }) {
+function MobilePredictionCard({ row, rank, currentUser, actualResult, hasScored }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
   const submitted = formatPlacedAt(row.submitted_at);
-  const htEarned = (row.ht_pts || 0) > 0;
-  const ftEarned = (row.ft_pts || 0) > 0;
+
   const outEarned = (row.outcome_pts || 0) > 0;
   const clsEarned = roundPoints(row.closest_pts || 0) > 0;
-  const etEarned = (row.et_ft_pts || 0) > 0;
   const etClsEarned = roundPoints(row.et_closest_pts || 0) > 0;
-  const penEarned = (row.pen_exact_pts || 0) > 0;
   const penClsEarned = roundPoints(row.pen_closest_pts || 0) > 0;
+
+  const phases = [
+    { label: 'HT',    pick: scorePair(row.ht_home, row.ht_away),         hasPick: row.ht_home != null,    earned: (row.ht_pts || 0) > 0,        pts: row.ht_pts,        color: 'emerald' },
+    { label: 'FT',    pick: scorePair(row.ft_home, row.ft_away),         hasPick: row.ft_home != null,    earned: (row.ft_pts || 0) > 0,        pts: row.ft_pts,        color: 'emerald' },
+    { label: 'ET HT', pick: scorePair(row.et_ht_home, row.et_ht_away),   hasPick: row.et_ht_home != null, earned: (row.et_ht_pts || 0) > 0,     pts: row.et_ht_pts,     color: 'orange'  },
+    { label: 'ET FT', pick: scorePair(row.et_ft_home, row.et_ft_away),   hasPick: row.et_ft_home != null, earned: (row.et_ft_pts || 0) > 0,     pts: row.et_ft_pts,     color: 'orange'  },
+    { label: 'Pens',  pick: scorePair(row.pen_home, row.pen_away),       hasPick: row.pen_home != null,   earned: (row.pen_exact_pts || 0) > 0, pts: row.pen_exact_pts, color: 'rose'    },
+  ].filter((p) => p.hasPick);
+
+  const bonusBadges = [
+    outEarned  && { label: `${outcomeLabel(row.ft_home, row.ft_away)} +${row.outcome_pts}`,    color: 'emerald' },
+    clsEarned  && { label: `Closest +${roundPoints(row.closest_pts)}`,                         color: 'emerald' },
+    etClsEarned && { label: `ET Closest +${roundPoints(row.et_closest_pts)}`,                  color: 'orange'  },
+    penClsEarned && { label: `Pen Closest +${roundPoints(row.pen_closest_pts)}`,               color: 'rose'    },
+  ].filter(Boolean);
 
   return (
     <div className={`overflow-hidden rounded-xl border ${isYou ? 'border-blue-300 bg-blue-50/60' : 'border-slate-200 bg-white'}`}>
-      <div className="flex items-center justify-between gap-2 px-3.5 pb-2 pt-3">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 px-3.5 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-400">{rank}</span>
           <span className="truncate font-bold text-slate-900">{username}</span>
           {isYou && (
-            <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
-              You
-            </span>
+            <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">You</span>
           )}
         </div>
-        {total > 0 ? (
-          <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-black tabular-nums text-emerald-700">
-            +{total}
-          </span>
-        ) : (
-          <span className="shrink-0 text-sm font-bold text-slate-300">{EMPTY}</span>
-        )}
+        {total > 0
+          ? <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-black tabular-nums text-emerald-700">+{total}</span>
+          : <span className="shrink-0 text-sm font-bold text-slate-300">{EMPTY}</span>
+        }
       </div>
 
-      {row.ft_home != null && (
-        <div className="border-t border-slate-100 px-3.5 py-2.5">
-          <div className="grid grid-cols-2 gap-2">
-            <MobileScoreCell
-              label="Half Time"
-              pick={scorePair(row.ht_home, row.ht_away)}
-              earned={htEarned}
-              hasScored={hasScored}
-              points={row.ht_pts}
-              hasPrediction={row.ht_home != null}
-            />
-            <MobileScoreCell
-              label="Full Time"
-              pick={scorePair(row.ft_home, row.ft_away)}
-              earned={ftEarned}
-              hasScored={hasScored}
-              points={row.ft_pts}
-              hasPrediction
-            />
-            {row.et_ft_home != null && (
-              <MobileScoreCell
-                label="ET Full Time"
-                pick={scorePair(row.et_ft_home, row.et_ft_away)}
-                earned={etEarned}
-                hasScored={hasScored}
-                points={row.et_ft_pts}
-                hasPrediction
-                accent="orange"
-              />
-            )}
-            {row.pen_home != null && (
-              <MobileScoreCell
-                label="Penalties"
-                pick={scorePair(row.pen_home, row.pen_away)}
-                earned={penEarned}
-                hasScored={hasScored}
-                points={row.pen_exact_pts}
-                hasPrediction
-                accent="rose"
-              />
-            )}
-          </div>
+      {/* Phase rows */}
+      {phases.length > 0 && (
+        <div className="border-t border-slate-100 px-3.5 py-2.5 space-y-2">
+          {phases.map((phase) => {
+            const missed = !phase.earned && hasScored;
+            const scoreColor = phase.earned
+              ? phase.color === 'orange' ? 'text-orange-700' : phase.color === 'rose' ? 'text-rose-700' : 'text-emerald-700'
+              : missed ? 'text-rose-400' : 'text-slate-700';
+            const labelColor = phase.earned
+              ? phase.color === 'orange' ? 'text-orange-400' : phase.color === 'rose' ? 'text-rose-400' : 'text-emerald-500'
+              : 'text-slate-400';
+            const ptsColor = phase.color === 'orange' ? 'text-orange-600' : phase.color === 'rose' ? 'text-rose-600' : 'text-emerald-600';
 
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {outEarned ? (
-              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
-                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
-                {outcomeLabel(row.ft_home, row.ft_away)} +{row.outcome_pts}
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400">
-                {outcomeLabel(row.ft_home, row.ft_away)}
-              </span>
-            )}
-            {/* Unscored ET/pen prediction indicators */}
-            {!hasScored && row.et_ft_home != null && (
-              <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600 ring-1 ring-orange-100">
-                ET {row.et_ft_home}–{row.et_ft_away}
-              </span>
-            )}
-            {!hasScored && row.pen_home != null && (
-              <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-600 ring-1 ring-rose-100">
-                Pens {row.pen_home}–{row.pen_away}
-              </span>
-            )}
-            {clsEarned && (
-              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
-                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
-                Closest +{roundPoints(row.closest_pts)}
-              </span>
-            )}
-            {etClsEarned && (
-              <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-100">
-                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
-                ET Cls +{roundPoints(row.et_closest_pts)}
-              </span>
-            )}
-            {penClsEarned && (
-              <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100">
-                <Check className="mr-0.5 inline h-3 w-3" aria-hidden="true" />
-                Pen Cls +{roundPoints(row.pen_closest_pts)}
-              </span>
-            )}
-            {submitted && (
-              <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
-                <Clock className="h-3 w-3" aria-hidden="true" />
-                {submitted}
-              </span>
-            )}
-          </div>
+            return (
+              <div key={phase.label} className="flex items-center gap-3">
+                <span className={`w-9 shrink-0 text-[10px] font-bold uppercase tracking-wider ${labelColor}`}>{phase.label}</span>
+                <span className={`flex-1 font-mono text-sm font-bold tabular-nums ${scoreColor}`}>{phase.pick}</span>
+                {hasScored && (
+                  phase.earned
+                    ? <span className={`text-[10px] font-bold ${ptsColor}`}>+{phase.pts} pts</span>
+                    : <X className="h-3 w-3 shrink-0 text-rose-400" aria-hidden="true" />
+                )}
+              </div>
+            );
+          })}
+
+          {/* Bonus badges + submission time */}
+          {(bonusBadges.length > 0 || submitted) && (
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
+              {bonusBadges.map((b) => (
+                <span key={b.label} className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ${
+                  b.color === 'orange' ? 'bg-orange-50 text-orange-700 ring-orange-100'
+                  : b.color === 'rose' ? 'bg-rose-50 text-rose-700 ring-rose-100'
+                  : 'bg-emerald-50 text-emerald-700 ring-emerald-100'
+                }`}>
+                  <Check className="h-2.5 w-2.5" aria-hidden="true" />
+                  {b.label}
+                </span>
+              ))}
+              {submitted && (
+                <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  {submitted}
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction, accent }) {
-  const missed = !earned && hasScored && hasPrediction;
-  const accentColor = accent === 'orange' ? 'text-orange-500' : accent === 'rose' ? 'text-rose-500' : 'text-emerald-500';
-  const accentText = accent === 'orange' ? 'text-orange-700' : accent === 'rose' ? 'text-rose-700' : 'text-emerald-700';
-  const labelCls = earned && hasScored ? accentColor : 'text-slate-400';
-  const valueCls = earned && hasScored ? accentText : missed ? 'text-slate-600' : hasPrediction ? 'text-slate-700' : 'text-slate-300';
-
-  return (
-    <div className="rounded-lg bg-slate-50 px-2.5 py-2 ring-1 ring-slate-100">
-      <p className={`text-[9px] font-bold uppercase tracking-widest ${labelCls}`}>{label}</p>
-      <p className={`mt-0.5 font-mono text-base font-black tabular-nums leading-none ${valueCls}`}>
-        {pick ?? EMPTY}
-      </p>
-      {hasScored && earned && (
-        <p className={`mt-1 text-[10px] font-bold ${accentText}`}>+{points} pts</p>
       )}
     </div>
   );
@@ -285,10 +228,11 @@ function MobileScoreCell({ label, pick, earned, hasScored, points, hasPrediction
 
 // ─── Desktop table ────────────────────────────────────────────────────────────
 
-function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored, showEt, showPen }) {
+function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored, showEt, showEtHt, showPen }) {
 
   return (
     <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:block">
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50/80">
@@ -298,7 +242,8 @@ function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored, s
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Time</th>
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Closest</th>
             <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Outcome</th>
-            {showEt && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-orange-400">{actualResult?.et_ft_home != null ? 'ET FT' : 'ET (pred)'}</th>}
+            {showEtHt && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-orange-400">{actualResult?.et_ht_home != null ? 'ET HT' : 'ET HT (pred)'}</th>}
+            {showEt && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-orange-400">{actualResult?.et_ft_home != null ? 'ET FT' : 'ET FT (pred)'}</th>}
             {showPen && <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-rose-400">{actualResult?.pen_home != null ? 'Pens' : 'Pens (pred)'}</th>}
             <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Placed</th>
             <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Total</th>
@@ -314,16 +259,18 @@ function DesktopPredictionsTable({ rows, currentUser, actualResult, hasScored, s
               actualResult={actualResult}
               hasScored={hasScored}
               showEt={showEt}
+              showEtHt={showEtHt}
               showPen={showPen}
             />
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
 
-function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored, showEt, showPen }) {
+function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored, showEt, showEtHt, showPen }) {
   const total = getPredictionRowTotal(row);
   const isYou = String(row.user_id) === String(currentUser?.id);
   const username = getPredictionUsername(row);
@@ -367,6 +314,18 @@ function DesktopPredictionRow({ row, rank, currentUser, actualResult, hasScored,
       </td>
       <td className="px-3 py-3 text-center">{ptsCell(roundPoints(row.closest_pts || 0))}</td>
       <td className="px-3 py-3 text-center">{ptsCell(row.outcome_pts || 0)}</td>
+      {showEtHt && (
+        <td className="px-3 py-3 text-center">
+          <PickCell
+            pick={scorePair(row.et_ht_home, row.et_ht_away)}
+            actual={scorePair(actualResult?.et_ht_home, actualResult?.et_ht_away)}
+            earned={(row.et_ht_pts || 0) > 0}
+            pts={row.et_ht_pts}
+            hasScored={hasScored}
+            hasPick={row.et_ht_home != null}
+          />
+        </td>
+      )}
       {showEt && (
         <td className="px-3 py-3 text-center">
           <PickCell

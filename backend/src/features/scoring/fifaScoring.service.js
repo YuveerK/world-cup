@@ -3,6 +3,7 @@
 const fifaClient = require('../../clients/fifaClient');
 const logger = require('../../shared/logging/logger');
 const { FINISHED_AFTER_MS } = require('../../config/constants');
+const { FIFA_PERIODS } = require('../../config/fifaPeriods');
 const usersRepo = require('../users/users.repository');
 const { scoreFromData, scoreHalfTimeFromData } = require('./scoring.service');
 const repo = require('./scoring.repository');
@@ -65,7 +66,7 @@ function firstHalfEndScore(timeline) {
 }
 
 // Returns the score at the end of a given period using the timeline's End Time events.
-// Period 3 = HT (45 min), Period 5 = FT (90 min), Period 7 = ET HT (105 min), Period 9 = ET FT (120 min).
+// Period constants: FIRST_HALF=3, SECOND_HALF=5, ET_FIRST_HALF=7, ET_SECOND_HALF=9.
 // Uses TypeLocalized 'End Time' as the primary signal — confirmed present in 2022 World Cup Final timeline.
 function getPeriodEndScore(timeline, period) {
   const events = timeline?.Event || [];
@@ -140,15 +141,20 @@ async function scoreFromFifa(match) {
     return;
   }
 
-  // Period 4 = regular HT interval, Period 6 = ET HT interval — match not yet over.
-  if (Number(live.Period) === 4 || Number(live.Period) === 6) {
-    logger.info(`Match ${matchId} is at half-time interval (period ${live.Period}) — skipping scoring`);
+  // Skip scoring during any half-time interval — match not yet over.
+  const period = Number(live.Period);
+  if (
+    period === FIFA_PERIODS.REGULAR_HT ||
+    period === FIFA_PERIODS.PRE_ET_INTERVAL ||
+    period === FIFA_PERIODS.ET_HT
+  ) {
+    logger.info(`Match ${matchId} is at half-time interval (period ${period}) — skipping scoring`);
     return;
   }
 
-  // Extract the authoritative 90-min score from the timeline (Period 5 end event).
+  // Extract the authoritative 90-min score from the timeline (SECOND_HALF end event).
   // live.HomeTeam.Score is the 120-min score for ET matches — do NOT use it as FT.
-  const ftFromTimeline = getPeriodEndScore(timeline, 5);
+  const ftFromTimeline = getPeriodEndScore(timeline, FIFA_PERIODS.SECOND_HALF);
   let ftHome, ftAway;
 
   if (ftFromTimeline) {
@@ -158,8 +164,8 @@ async function scoreFromFifa(match) {
     // Before falling back to live.HomeTeam.Score, check whether the match went to ET.
     // For ET matches the live score is the 120-min cumulative total — using it as FT
     // would score everyone's 90-min predictions against the wrong number.
-    const matchWentToEt = getPeriodEndScore(timeline, 7) ||
-                          getPeriodEndScore(timeline, 9) ||
+    const matchWentToEt = getPeriodEndScore(timeline, FIFA_PERIODS.ET_FIRST_HALF) ||
+                          getPeriodEndScore(timeline, FIFA_PERIODS.ET_SECOND_HALF) ||
                           live.HomeTeamPenaltyScore != null;
     if (matchWentToEt) {
       logger.warn(
@@ -183,9 +189,9 @@ async function scoreFromFifa(match) {
 
   const ht = getHalfTimeScore(live, timeline);
 
-  // ET scores from timeline Period 7 (ET HT, 105 min) and Period 9 (ET FT, 120 min).
-  const etHtScore = getPeriodEndScore(timeline, 7);
-  const etFtScore = getPeriodEndScore(timeline, 9);
+  // ET scores from timeline ET_FIRST_HALF (105 min) and ET_SECOND_HALF (120 min) end events.
+  const etHtScore = getPeriodEndScore(timeline, FIFA_PERIODS.ET_FIRST_HALF);
+  const etFtScore = getPeriodEndScore(timeline, FIFA_PERIODS.ET_SECOND_HALF);
 
   // Penalty scores already provided directly by the live endpoint.
   const penHome = live.HomeTeamPenaltyScore != null ? Number(live.HomeTeamPenaltyScore) : null;
@@ -246,11 +252,13 @@ async function checkAndScoreFinishedMatches() {
     const results = data.Results || [];
 
     const liveMatches = results.filter((m) => m.MatchStatus === 3);
-    // Exclude matches at Period 4 (regular HT interval) or Period 6 (ET HT interval)
-    // even when the calendar marks them as finished — this happens during weather
-    // suspensions where FIFA's API intermittently flips status codes.
+    // Exclude matches at any HT interval even when the calendar marks them as finished —
+    // this happens during weather suspensions where FIFA's API flips status codes.
     const officiallyFinished = results.filter(
-      (m) => [2, 4, 5].includes(m.MatchStatus) && Number(m.Period) !== 4 && Number(m.Period) !== 6
+      (m) => [2, 4, 5].includes(m.MatchStatus) &&
+        Number(m.Period) !== FIFA_PERIODS.REGULAR_HT &&
+        Number(m.Period) !== FIFA_PERIODS.PRE_ET_INTERVAL &&
+        Number(m.Period) !== FIFA_PERIODS.ET_HT
     );
     const inferredFinished = results.filter(
       (m) =>
