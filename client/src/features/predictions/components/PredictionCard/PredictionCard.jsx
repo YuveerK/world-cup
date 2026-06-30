@@ -582,14 +582,14 @@ export function PredictionCard({
       ? (htEarned ? 'green' : 'red')
       : isAtHalfTime
         ? (liveHtScoreMatches ? 'green' : 'amber')
-        : 'slate';
+        : liveHtScoreMatches ? 'green' : 'slate';
   const liveHtStatus = !hasHtPick
     ? 'No pick'
     : htScored
       ? (htEarned ? 'Correct' : 'Missed')
       : isAtHalfTime
         ? 'Live now'
-        : 'Pending';
+        : liveHtScoreMatches ? 'On track' : 'Pending';
   const liveFtScoreFinalized = regulationOver;
   // Once ET/pens are actually underway (or done) the 90-min score is confirmed — evaluate the FT pick now.
   const liveFtConfirmed = etUnderwayOrDone;
