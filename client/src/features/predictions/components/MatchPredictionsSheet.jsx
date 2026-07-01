@@ -3,6 +3,7 @@ import { AlertCircle, Eye, Loader2, X } from 'lucide-react';
 import { Flag } from '@/features/matches/components/Flag';
 import { displayStatus, hasMatchScore, scoreText, statusPillLabel } from '@/features/matches/utils/matchStatus';
 import { matchTitle, teamName } from '@/features/matches/utils/matchFormatters';
+import { getResultTimeline } from '../utils/pointsBreakdown';
 import { MatchPredictionsTable } from './MatchPredictionsTable';
 
 export function MatchPredictionsSheet({
@@ -36,7 +37,7 @@ export function MatchPredictionsSheet({
         <div className="flex-1 overflow-y-auto p-5">
           {match && (
             <>
-              <MatchSummary match={match} />
+              <MatchSummary match={match} actualResult={actualResult} />
               <SheetContent
                 match={match}
                 rows={rows}
@@ -76,9 +77,11 @@ function SheetHeader({ match, onClose }) {
   );
 }
 
-function MatchSummary({ match }) {
+function MatchSummary({ match, actualResult }) {
   const status = displayStatus(match);
   const location = [match?.stadium, match?.city].filter(Boolean).join(', ');
+  // ET HT is a ledger-level detail; the summary strip sticks to the main phases.
+  const timeline = getResultTimeline(actualResult).filter((segment) => segment.label !== 'ET HT');
 
   return (
     <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
@@ -106,6 +109,16 @@ function MatchSummary({ match }) {
         {match.stage && <span>{match.stage}</span>}
         {location && <span>{location}</span>}
       </div>
+      {timeline.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-slate-100 pt-1.5 text-[11px]">
+          {timeline.map((segment) => (
+            <span key={segment.label} className="whitespace-nowrap">
+              <span className="font-bold text-slate-400">{segment.label}</span>{' '}
+              <span className="font-mono font-semibold tabular-nums text-slate-700">{segment.score}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
