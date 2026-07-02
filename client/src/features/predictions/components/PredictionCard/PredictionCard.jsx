@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { TeamBlock } from "./TeamBlock";
 import { ScoreInputGroup } from "./ScoreInputGroup";
+import { PointsLedger, ScoreToken } from "../ScoreBreakdown";
+import { SCORING } from "../../utils/pointsBreakdown";
 import { formatDate, formatTime } from "@/lib/date/index";
 import { roundPoints } from "@/lib/utils/number";
 import {
@@ -142,34 +144,6 @@ function liveToneIcon(tone, className = "h-3.5 w-3.5") {
   return <Clock className={`${className} shrink-0`} aria-hidden="true" />;
 }
 
-function LivePredictionRow({ label, pick, tone, status, points }) {
-  const styles = LIVE_TONE[tone] ?? LIVE_TONE.slate;
-  const statusText = points != null && points > 0 ? `+${points}` : status;
-
-  return (
-    <div className={`flex min-h-[40px] items-center justify-between gap-3 rounded-lg border px-3 py-2 ${styles.row}`}>
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className={`w-5 shrink-0 text-[11px] font-black uppercase tracking-wide ${styles.label}`}>
-          {label}
-        </span>
-        <span className={`font-mono text-sm font-black tabular-nums ${styles.score}`}>
-          {pick}
-        </span>
-      </div>
-      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${styles.badge}`}>
-        {liveToneIcon(tone)}
-        {statusText}
-      </span>
-    </div>
-  );
-}
-
-function formatCurrentLeadLabel(currentMargin, homeName, awayName) {
-  if (currentMargin > 0) return `${homeName} lead`;
-  if (currentMargin < 0) return `${awayName} lead`;
-  return 'Level';
-}
-
 function formatLiveNeedsText({
   ftExactImpossible,
   ftOutcomeOnTrack,
@@ -190,9 +164,11 @@ function formatLiveNeedsText({
 
   if (!ftOutcomeOnTrack && swing !== 0) {
     const targetScore = `${predHome}\u2013${predAway}`;
-    if (predictedMargin > 0) return `${homeName} comeback to ${targetScore}`;
-    if (predictedMargin < 0) return `${awayName} comeback to ${targetScore}`;
-    return `match to finish ${targetScore}`;
+    // "Comeback" only when the picked side is actually behind \u2014 a level score
+    // just needs goals, which the exact-needs line below expresses better.
+    if (predictedMargin > 0 && currentMargin < 0) return `${homeName} comeback to ${targetScore}`;
+    if (predictedMargin < 0 && currentMargin > 0) return `${awayName} comeback to ${targetScore}`;
+    if (predictedMargin === 0) return `match to finish ${targetScore}`;
   }
 
   const exactNeeds = [
@@ -203,37 +179,29 @@ function formatLiveNeedsText({
   return exactNeeds.length > 0 ? `${exactNeeds.join(', ')} for exact score` : 'Hold this result path';
 }
 
-function LiveFtDetailCard({ tone, homeCode, awayCode, pick, current, needs, statusHeading, statusText, heading = 'Full time pick' }) {
+// One pick, one panel, one sentence: heading + live context on the first row,
+// the pick beneath, and a single tone-coloured needs line — no repeated status.
+function LiveFtDetailCard({ tone, homeCode, awayCode, pick, current, minute, needs, heading = 'Full-time pick' }) {
   const styles = LIVE_TONE[tone] ?? LIVE_TONE.slate;
 
   return (
     <div className={`mt-2.5 rounded-lg border px-3 py-2 ${styles.panel}`}>
-      <div className="min-w-0">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
           {heading}
         </p>
-        <p className={`mt-1 font-mono text-base font-black tabular-nums ${styles.panelText}`}>
-          {homeCode} {pick} {awayCode}
+        <p className="shrink-0 text-[11px] font-semibold text-slate-500">
+          Current <span className="font-mono font-bold tabular-nums text-slate-700">{current}</span>
+          {minute ? <span className="text-slate-400"> · {minute}</span> : null}
         </p>
       </div>
-      <div className="mt-2 space-y-0.5 text-xs text-slate-600">
-        <p className="flex items-center justify-between gap-3">
-          <span className="font-medium text-slate-500">Current:</span>
-          <span className="font-mono font-bold tabular-nums text-slate-700">{homeCode} {current} {awayCode}</span>
-        </p>
-        <p className="flex items-center justify-between gap-3">
-          <span className="font-medium text-slate-500">Needs:</span>
-          <span className="text-right font-semibold text-slate-700">{needs}</span>
-        </p>
-      </div>
-      {statusHeading && statusText && (
-        <p className={`mt-2 flex items-start gap-1.5 border-t pt-2 text-[11px] font-semibold leading-snug ${styles.status}`}>
-          {liveToneIcon(tone, "mt-px h-3.5 w-3.5")}
-          <span>
-            {statusHeading} - {statusText}
-          </span>
-        </p>
-      )}
+      <p className={`mt-1 font-mono text-base font-black tabular-nums ${styles.panelText}`}>
+        {homeCode} {pick} {awayCode}
+      </p>
+      <p className={`mt-1.5 flex items-start gap-1.5 text-[11px] font-semibold leading-snug ${styles.status}`}>
+        {liveToneIcon(tone, "mt-px h-3.5 w-3.5")}
+        <span>{needs}</span>
+      </p>
     </div>
   );
 }
@@ -300,25 +268,24 @@ function ExtraPicksDisclosure({ expanded, onToggle, subtitle, prediction, points
   const penPts = (points?.pen_exact_pts || 0) + (points?.pen_winner_pts || 0) + (points?.pen_closest_pts || 0);
 
   return (
-    <div className="mt-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div className="mt-2.5">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex min-h-[44px] w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover:bg-slate-50"
+        className="flex w-full items-center justify-between gap-3 py-1 text-left"
       >
-        <span className="min-w-0">
-          <span className="block text-xs font-bold text-slate-700">Extra-time & pens predictions</span>
-          <span className="block text-[11px] text-slate-400">{subtitle}</span>
+        <span className={`min-w-0 truncate text-[11px] font-medium ${active ? 'text-slate-600' : 'text-slate-400'}`}>
+          Extra-time & pens picks · {subtitle}
         </span>
         {expanded ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+          <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
         )}
       </button>
       {expanded && (
-        <div className="flex flex-wrap gap-1.5 border-t border-slate-100 px-3 pb-3 pt-2">
+        <div className="flex flex-wrap gap-1.5 pt-1.5">
           {prediction.et_ht_home != null && (
             <EtPickChip
               label="ET HT"
@@ -353,103 +320,62 @@ function ExtraPicksDisclosure({ expanded, onToggle, subtitle, prediction, points
   );
 }
 
-function outcomeChipLabel(outcome, homeName, awayName) {
-  if (outcome === 'Home win') return `${homeName} win`;
-  if (outcome === 'Away win') return `${awayName} win`;
-  return 'Draw';
-}
-
-function FinishedPhaseRow({ label, pick, earned, hasPoints = false, pts = 0 }) {
-  const noPick = pick === '—';
-  const scored = !noPick && hasPoints;
-  const correct = scored && earned;
-  const earnedPts = roundPoints(pts);
-  // Any awarded points render green, regardless of which phase scored them.
-  const c = {
-    row: 'bg-emerald-50 border-l-[3px] border-emerald-400',
-    label: 'text-emerald-800',
-    score: 'text-emerald-700',
-    badge: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
-    icon: 'text-emerald-500',
+// Fallback when the API hasn't attached the stored result yet. A non-ET match's
+// final score IS its 90' score; an ET match's 90' score is unknowable here, so
+// the ledger simply doesn't render until the stored result arrives.
+function synthesizeActual(match) {
+  if (!hasMatchScore(match) || match.aet) return null;
+  return {
+    ht_home: null, ht_away: null,
+    ft_home: Number(match.score.home), ft_away: Number(match.score.away),
+    et_ht_home: null, et_ht_away: null, et_ft_home: null, et_ft_away: null,
+    pen_home: null, pen_away: null,
   };
-  const rowCls = correct ? c.row : 'bg-slate-100';
-  const statusBadge = correct
-    ? c.badge
-    : 'bg-rose-50 text-rose-600 ring-rose-100';
-  return (
-    <div className={`flex min-h-[44px] items-center justify-between gap-3 rounded-xl px-3.5 ${rowCls}`}>
-      <span className={`text-sm font-semibold ${correct ? c.label : 'text-slate-600'}`}>
-        {label}
-      </span>
-      <span className="flex items-center gap-2">
-        <span className={`font-mono text-sm font-bold tabular-nums ${correct ? c.score : 'text-slate-500'}`}>
-          {pick}
-        </span>
-        {scored && (
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${statusBadge}`}>
-            {correct ? (
-              <CheckCircle2 className={`h-3.5 w-3.5 ${c.icon}`} aria-hidden="true" />
-            ) : (
-              <XCircle className="h-3.5 w-3.5 text-rose-400" aria-hidden="true" />
-            )}
-            {correct ? `+${earnedPts}` : 'Missed'}
-          </span>
-        )}
-      </span>
-    </div>
-  );
 }
 
-function BonusTag({ label, pts }) {
-  return (
-    <span className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-      <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-      {label}
-      <span className="font-black">+{roundPoints(pts || 0)}</span>
-    </span>
-  );
-}
-
-function FinishedUnusedPicksDisclosure({ expanded, onToggle, title, subtitle, prediction, showEt, showPens }) {
-  return (
-    <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="flex min-h-[44px] w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover:bg-slate-50"
-      >
-        <span className="min-w-0">
-          <span className="block text-xs font-bold text-slate-600">{title}</span>
-          <span className="block text-[11px] text-slate-400">{subtitle}</span>
-        </span>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-        ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-        )}
-      </button>
-      {expanded && (
-        <div className="flex flex-wrap gap-1.5 border-t border-slate-100 px-3 pb-3 pt-2">
-          {showEt && prediction.et_ht_home != null && (
-            <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-[11px] font-semibold text-slate-400 ring-1 ring-slate-100">
-              ET HT {scorePair(prediction.et_ht_home, prediction.et_ht_away)}
-            </span>
-          )}
-          {showEt && prediction.et_ft_home != null && (
-            <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-[11px] font-semibold text-slate-400 ring-1 ring-slate-100">
-              ET FT {scorePair(prediction.et_ft_home, prediction.et_ft_away)}
-            </span>
-          )}
-          {showPens && prediction.pen_home != null && (
-            <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-[11px] font-semibold text-slate-400 ring-1 ring-slate-100">
-              Pens {scorePair(prediction.pen_home, prediction.pen_away)}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+// Token strip for a finished match: every pick that was in play, with related
+// bonuses folded into the FT / ET FT / Pens tokens (same rule as the sheet).
+function getFinishedPicks(prediction, points, { wentToEt, wentToPens }) {
+  const picks = [];
+  if (prediction.ht_home != null) {
+    picks.push({
+      label: 'HT',
+      score: scorePair(prediction.ht_home, prediction.ht_away),
+      scored: points?.ht_pts != null,
+      pts: points?.ht_pts || 0,
+    });
+  }
+  picks.push({
+    label: 'FT',
+    score: scorePair(prediction.ft_home, prediction.ft_away),
+    scored: points?.ft_pts != null,
+    pts: (points?.ft_pts || 0) + (points?.outcome_pts || 0) + (points?.closest_pts || 0),
+  });
+  if (wentToEt && prediction.et_ht_home != null) {
+    picks.push({
+      label: 'ET HT',
+      score: scorePair(prediction.et_ht_home, prediction.et_ht_away),
+      scored: points?.et_ht_pts != null,
+      pts: points?.et_ht_pts || 0,
+    });
+  }
+  if (wentToEt && prediction.et_ft_home != null) {
+    picks.push({
+      label: 'ET FT',
+      score: scorePair(prediction.et_ft_home, prediction.et_ft_away),
+      scored: points?.et_ft_pts != null,
+      pts: (points?.et_ft_pts || 0) + (points?.et_outcome_pts || 0) + (points?.et_closest_pts || 0),
+    });
+  }
+  if (wentToPens && prediction.pen_home != null) {
+    picks.push({
+      label: 'Pens',
+      score: scorePair(prediction.pen_home, prediction.pen_away),
+      scored: points?.pen_exact_pts != null,
+      pts: (points?.pen_exact_pts || 0) + (points?.pen_winner_pts || 0) + (points?.pen_closest_pts || 0),
+    });
+  }
+  return picks;
 }
 
 export function PredictionCard({
@@ -465,7 +391,7 @@ export function PredictionCard({
 }) {
   const [attempted, setAttempted] = useState(false);
   const [extraPicksOpen, setExtraPicksOpen] = useState(false);
-  const [finishedUnusedPicksOpen, setFinishedUnusedPicksOpen] = useState(false);
+  const [extraInputsOpen, setExtraInputsOpen] = useState(false);
   const hasPrediction = Boolean(prediction);
   const locked = isPredictionLocked(match);
   const isKnockout = !match.group && Boolean(match.stage);
@@ -510,21 +436,15 @@ export function PredictionCard({
 
   const isPristine = hasPrediction && !isDirty;
 
-  const htEarned = (points?.ht_pts || 0) > 0;
-  const ftEarned = (points?.ft_pts || 0) > 0;
-  const outEarned = (points?.outcome_pts || 0) > 0;
-  const clsEarned = roundPoints(points?.closest_pts || 0) > 0;
-  const etHtEarned = (points?.et_ht_pts || 0) > 0;
-  const etEarned = (points?.et_ft_pts || 0) > 0;
-  const etOutEarned = (points?.et_outcome_pts || 0) > 0;
-  const etClsEarned = roundPoints(points?.et_closest_pts || 0) > 0;
-  const penEarned = (points?.pen_exact_pts || 0) > 0;
-  const penWinEarned = (points?.pen_winner_pts || 0) > 0;
-  const penClsEarned = roundPoints(points?.pen_closest_pts || 0) > 0;
-
   // How was the match decided? Used to suppress ET/pen ✗ when those phases never happened.
   const matchWentToEt = isFinished && Boolean(match.aet);
   const matchWentToPens = isFinished && match.score?.homePenalty != null;
+  // Stored phase-by-phase result attached by the fixtures API; synthesized from the
+  // headline score when absent so the ledger degrades gracefully.
+  const finishedActualResult = isFinished ? match.result ?? synthesizeActual(match) : null;
+  const finishedPicks = isFinished && hasPrediction
+    ? getFinishedPicks(prediction, points, { wentToEt: matchWentToEt, wentToPens: matchWentToPens })
+    : [];
   const hasEtPrediction = Boolean(prediction?.et_ht_home != null || prediction?.et_ft_home != null);
   const hasPenPrediction = Boolean(prediction?.pen_home != null);
   // "Not applicable" = user predicted the phase but the match never reached it.
@@ -576,20 +496,6 @@ export function PredictionCard({
   const liveHtScoreMatches = hasHtPick && hasMatchScore(match) &&
     Number(prediction.ht_home) === liveHomeScore &&
     Number(prediction.ht_away) === liveAwayScore;
-  const liveHtTone = !hasHtPick
-    ? 'slate'
-    : htScored
-      ? (htEarned ? 'green' : 'red')
-      : isAtHalfTime
-        ? (liveHtScoreMatches ? 'green' : 'amber')
-        : liveHtScoreMatches ? 'green' : 'slate';
-  const liveHtStatus = !hasHtPick
-    ? 'No pick'
-    : htScored
-      ? (htEarned ? 'Correct' : 'Missed')
-      : isAtHalfTime
-        ? 'Live now'
-        : liveHtScoreMatches ? 'On track' : 'Pending';
   const liveFtScoreFinalized = regulationOver;
   // Once ET/pens are actually underway (or done) the 90-min score is confirmed — evaluate the FT pick now.
   const liveFtConfirmed = etUnderwayOrDone;
@@ -606,15 +512,6 @@ export function PredictionCard({
         : outcomeOnTrack
           ? 'green'
           : 'amber';
-  const liveFtStatus = !hasFtPick
-    ? 'No pick'
-    : liveFtScoreFinalized
-      ? (liveFtConfirmed ? (liveFtExact ? 'Correct' : 'Missed') : 'Pending')
-      : liveFtExactImpossible
-        ? 'Impossible'
-        : outcomeOnTrack
-          ? 'On track'
-          : 'Off track';
   const liveFtNeeds = hasFtPick && hasMatchScore(match) && !liveFtScoreFinalized
     ? formatLiveNeedsText({
         ftExactImpossible: liveFtExactImpossible,
@@ -629,25 +526,6 @@ export function PredictionCard({
     : liveFtConfirmed
       ? (liveFtExact ? 'FT prediction matched!' : `FT confirmed ${liveCurrentScore}`)
       : 'FT scoring will update when confirmed';
-  const liveCurrentMargin = hasMatchScore(match) ? liveHomeScore - liveAwayScore : 0;
-  const liveStatusHeading = hasMatchScore(match)
-    ? formatCurrentLeadLabel(liveCurrentMargin, homeDisplayName, awayDisplayName)
-    : 'Live score pending';
-  const liveStatusText = !hasFtPick
-    ? 'No full-time pick submitted'
-    : !hasMatchScore(match)
-      ? 'FT status will update when live score is available'
-      : liveFtScoreFinalized
-        ? (liveFtConfirmed
-            ? (liveFtExact
-                ? 'your FT pick matched the final score'
-                : 'your FT pick did not match the final score')
-            : 'FT pick will score when full time is confirmed')
-        : liveFtTone === 'red'
-          ? 'your FT pick is unreachable'
-          : liveFtTone === 'green'
-            ? 'your FT pick is on track'
-            : 'your FT pick is off track';
   // ── Extra-time full-time pick (mirrors the FT logic, but against ET totals) ──
   // During ET the live score is the cumulative 120-min total, and the user's ET
   // full-time pick is also a cumulative total — so they compare directly.
@@ -686,19 +564,6 @@ export function PredictionCard({
           homeName: homeDisplayName,
           awayName: awayDisplayName,
         });
-  const etStatusText = !hasEtFtPick
-    ? 'No extra-time pick submitted'
-    : !hasMatchScore(match)
-      ? 'ET status will update when live score is available'
-      : etFtConfirmed
-        ? (etFtExact
-            ? 'your ET pick matched the 120-min score'
-            : 'your ET pick did not match the 120-min score')
-        : etFtTone === 'red'
-          ? 'your ET pick is unreachable'
-          : etFtTone === 'green'
-            ? 'your ET pick is on track'
-            : 'your ET pick is off track';
   // ── Penalty shootout pick (live shootout score lives on match.score.*Penalty) ──
   const predPenHome = hasPrediction ? Number(prediction.pen_home) : null;
   const predPenAway = hasPrediction ? Number(prediction.pen_away) : null;
@@ -738,24 +603,6 @@ export function PredictionCard({
               ].filter(Boolean);
               return needs.length > 0 ? `${needs.join(', ')} for exact` : 'Hold this shootout score';
             })();
-  const penStatusHeading = !hasPenScore
-    ? 'Shootout pending'
-    : penLeaderNow > 0
-      ? `${homeDisplayName} lead shootout`
-      : penLeaderNow < 0
-        ? `${awayDisplayName} lead shootout`
-        : 'Shootout level';
-  const penStatusText = !hasPenPick
-    ? 'No penalty pick submitted'
-    : !hasPenScore
-      ? 'shootout score will update live'
-      : penExact
-        ? 'your penalty pick matches the live shootout'
-        : penWinnerOnTrack
-          ? 'your penalty winner is on track'
-          : penExactImpossible
-            ? 'exact shootout score no longer possible'
-            : 'penalty shootout in progress';
   // Show the extra-time pick whenever ET is underway/done, and stack the penalty pick
   // beneath it during the shootout so the user can see both at once.
   const showPenDetailCard = penUnderwayOrDone && hasPenPick;
@@ -771,12 +618,57 @@ export function PredictionCard({
     hasMatchScore(match) && liveHomeScore === liveAwayScore && liveMinuteValue != null && liveMinuteValue >= 75;
   const extraPicksExpanded = extraPicksOpen || showEtRowsInline || showPenRowInline || shouldAutoShowExtraPicks;
   const extraPicksSubtitle = isPreEtInterval
-    ? 'Extra time next'
+    ? 'extra time next'
     : showEtRowsInline || showPenRowInline
-    ? 'Live now'
+    ? 'live now'
     : shouldAutoShowExtraPicks
-      ? 'Match level late - showing ET picks'
-      : 'Pending if match reaches extra time';
+      ? 'match level late'
+      : 'pending';
+
+  // Live token strip: same ScoreTokens as the sheet/finished card. Amber dot =
+  // pick still possible, green dot = matching right now, plain grey = idle or
+  // out of reach; earned/missed states appear once a phase is actually scored.
+  const ftScored = points?.ft_pts != null;
+  const liveFtCurrentlyExact = hasFtPick && hasMatchScore(match) &&
+    predFtHome === liveHomeScore && predFtAway === liveAwayScore;
+  const liveTokens = hasPrediction
+    ? [
+        {
+          label: 'HT',
+          score: hasHtPick ? scorePair(prediction.ht_home, prediction.ht_away) : '—',
+          scored: htScored,
+          pts: points?.ht_pts || 0,
+          live: !hasHtPick || htScored
+            ? null
+            : liveHtScoreMatches
+              ? { tone: 'correct' }
+              : isAtHalfTime
+                ? { tone: 'possible' }
+                : null,
+        },
+        {
+          label: 'FT',
+          score: hasFtPick ? scorePair(prediction.ft_home, prediction.ft_away) : '—',
+          scored: ftScored,
+          pts: (points?.ft_pts || 0) + (points?.outcome_pts || 0) + (points?.closest_pts || 0),
+          live: !hasFtPick || ftScored || liveFtScoreFinalized || liveFtExactImpossible
+            ? null
+            : liveFtCurrentlyExact
+              ? { tone: 'correct' }
+              : { tone: 'possible' },
+        },
+      ]
+    : [];
+  // Points only exist once a phase has been scored; before that the pill is noise.
+  const liveScoredAnything = points != null &&
+    (points.ht_pts != null || points.ft_pts != null || points.et_ft_pts != null || points.pen_exact_pts != null);
+
+  // Upcoming form: ET/pens inputs are optional extras — collapsed for a fresh
+  // prediction, always expanded while any ET/pens value exists (saved or typed)
+  // so existing picks can never be hidden behind the disclosure.
+  const hasExtraDraftValues = [draft.et_ht_home, draft.et_ht_away, draft.et_ft_home, draft.et_ft_away, draft.pen_home, draft.pen_away]
+    .some((value) => value != null && String(value) !== '');
+  const extraInputsExpanded = extraInputsOpen || hasExtraDraftValues || hasAnyExtraPick;
 
   // Draft values for validation
   const draftHtHome = draft.ht_home === '' || draft.ht_home == null ? null : Number(draft.ht_home);
@@ -813,7 +705,7 @@ export function PredictionCard({
     <button
       type="button"
       onClick={() => onViewStats(match)}
-      className="flex min-h-[36px] w-full items-center justify-center gap-1.5 border-t border-slate-100 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+      className="flex min-h-[36px] flex-1 items-center justify-center gap-1.5 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
     >
       {canShowMatchDetails(match) ? (
         <Activity className="h-3 w-3" aria-hidden="true" />
@@ -917,27 +809,9 @@ export function PredictionCard({
               <p className="text-xl font-black uppercase leading-none text-slate-300 sm:text-2xl">
                 vs
               </p>
-              {(() => {
-                const cd = !hasPrediction ? formatCountdown(match.date) : null;
-                if (cd) {
-                  const chip = {
-                    red:   'bg-red-100 text-red-700',
-                    amber: 'bg-amber-100 text-amber-700',
-                    slate: 'bg-slate-100 text-slate-500',
-                  };
-                  return (
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${chip[cd.level]}`}>
-                      <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                      {formatTime(match.date)} · {cd.label}
-                    </span>
-                  );
-                }
-                return (
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
-                    {formatTime(match.date)}
-                  </p>
-                );
-              })()}
+              <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                {formatTime(match.date)}
+              </p>
             </div>
           )}
         </div>
@@ -945,13 +819,29 @@ export function PredictionCard({
         <TeamBlock team={match.away} align="right" />
       </div>
 
-      {/* ── Stats / Lineups — directly below the scoreline ── */}
-      {matchDetailsButton}
-
       {/* ── UPCOMING: input form with smart button ── */}
       {isUpcoming && (
         <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-5">
           <div className="mx-auto flex w-full flex-col items-center gap-2.5 sm:max-w-sm">
+            <div className="flex w-full items-center justify-between gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Your prediction
+              </p>
+              {(() => {
+                const cd = formatCountdown(match.date);
+                const chip = {
+                  red: 'bg-red-100 text-red-700',
+                  amber: 'bg-amber-100 text-amber-700',
+                  slate: 'bg-slate-100 text-slate-500',
+                };
+                return (
+                  <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${chip[cd?.level ?? 'slate']}`}>
+                    <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                    Locks {formatTime(match.date)}{cd ? ` · ${cd.short}` : ''}
+                  </span>
+                );
+              })()}
+            </div>
             <div className="flex w-full items-end justify-between gap-3">
               <ScoreInputGroup
                 label="Half time"
@@ -981,33 +871,48 @@ export function PredictionCard({
               </div>
             )}
             {showEtInputs && (
-              <div className="w-full border-t border-slate-200 pt-2">
-                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Extra time</p>
-                <p className="mb-2 text-[10px] text-slate-400">Predict in case the match reaches this stage</p>
-                <div className="flex w-full items-end justify-between gap-3">
-                  <ScoreInputGroup
-                    label="ET half time"
-                    homeValue={draft.et_ht_home ?? ""}
-                    awayValue={draft.et_ht_away ?? ""}
-                    onHome={handle("et_ht_home")}
-                    onAway={handle("et_ht_away")}
-                    disabled={locked}
-                  />
-                  <ScoreInputGroup
-                    label="ET full time"
-                    homeValue={draft.et_ft_home ?? ""}
-                    awayValue={draft.et_ft_away ?? ""}
-                    onHome={handle("et_ft_home")}
-                    onAway={handle("et_ft_away")}
-                    disabled={locked}
-                  />
-                </div>
+              <button
+                type="button"
+                onClick={() => setExtraInputsOpen((open) => !open)}
+                aria-expanded={extraInputsExpanded}
+                className="flex w-full items-center justify-between gap-3 border-t border-slate-200 pt-2 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Extra time & penalties
+                  </span>
+                  <span className="block text-[10px] text-slate-400">
+                    Optional — scored only if the match goes past 90'
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${extraInputsExpanded ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+            )}
+            {showEtInputs && extraInputsExpanded && (
+              <div className="flex w-full items-end justify-between gap-3">
+                <ScoreInputGroup
+                  label="ET half time"
+                  homeValue={draft.et_ht_home ?? ""}
+                  awayValue={draft.et_ht_away ?? ""}
+                  onHome={handle("et_ht_home")}
+                  onAway={handle("et_ht_away")}
+                  disabled={locked}
+                />
+                <ScoreInputGroup
+                  label="ET full time"
+                  homeValue={draft.et_ft_home ?? ""}
+                  awayValue={draft.et_ft_away ?? ""}
+                  onHome={handle("et_ft_home")}
+                  onAway={handle("et_ft_away")}
+                  disabled={locked}
+                />
               </div>
             )}
-            {showPenInputs && (
-              <div className="w-full border-t border-slate-200 pt-2">
-                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Penalties</p>
-                <p className="mb-2 text-[10px] text-slate-400">Predict in case the match reaches this stage</p>
+            {showPenInputs && extraInputsExpanded && (
+              <div className="w-full">
                 <div className="flex w-full items-end justify-center gap-3">
                   <ScoreInputGroup
                     label="Penalty score"
@@ -1056,6 +961,12 @@ export function PredictionCard({
                     ? "Update"
                     : "Save"}
             </button>
+            {!canSave && !locked && (
+              <p className="text-[10px] font-medium text-slate-400">Enter a full-time score to save</p>
+            )}
+            <p className="text-center text-[10px] font-medium leading-relaxed text-slate-400">
+              Exact HT +{SCORING.HT_EXACT} · Exact FT +{SCORING.FT_EXACT} · Outcome +{SCORING.OUTCOME} · Closest score shares {SCORING.CLOSEST_POOL} pts
+            </p>
           </div>
         </div>
       )}
@@ -1067,27 +978,27 @@ export function PredictionCard({
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
               Your prediction
             </p>
-            <span className={`rounded-full px-3 py-1 text-sm font-black tabular-nums ${
-              matchTotal > 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
-            }`}>
-              {matchTotal > 0 ? `${matchTotal} pts` : '0 pts'}
-            </span>
+            {liveScoredAnything ? (
+              <span className={`rounded-full px-3 py-1 text-sm font-black tabular-nums ${
+                matchTotal > 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {matchTotal > 0 ? `${matchTotal} pts` : '0 pts'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-600 ring-1 ring-rose-100">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                </span>
+                Live
+              </span>
+            )}
           </div>
 
-          <div className="space-y-1.5">
-            <LivePredictionRow
-              label="HT"
-              pick={hasHtPick ? scorePair(prediction.ht_home, prediction.ht_away) : "\u2014"}
-              tone={liveHtTone}
-              status={liveHtStatus}
-              points={htEarned ? points?.ht_pts : null}
-            />
-            <LivePredictionRow
-              label="FT"
-              pick={hasFtPick ? scorePair(prediction.ft_home, prediction.ft_away) : "\u2014"}
-              tone={liveFtTone}
-              status={liveFtStatus}
-            />
+          <div className="flex flex-wrap gap-1.5">
+            {liveTokens.map((token) => (
+              <ScoreToken key={token.label} {...token} />
+            ))}
           </div>
 
           {showEtDetailCard && (
@@ -1098,9 +1009,8 @@ export function PredictionCard({
               awayCode={awayCode}
               pick={scorePair(prediction.et_ft_home, prediction.et_ft_away)}
               current={liveCurrentScore}
+              minute={match.minute}
               needs={etFtNeeds}
-              statusHeading={liveStatusHeading}
-              statusText={etStatusText}
             />
           )}
           {showPenDetailCard && (
@@ -1112,8 +1022,6 @@ export function PredictionCard({
               pick={scorePair(prediction.pen_home, prediction.pen_away)}
               current={penCurrentScore}
               needs={penNeeds}
-              statusHeading={penStatusHeading}
-              statusText={penStatusText}
             />
           )}
           {!showEtDetailCard && !showPenDetailCard && (
@@ -1123,9 +1031,8 @@ export function PredictionCard({
               awayCode={awayCode}
               pick={hasFtPick ? scorePair(prediction.ft_home, prediction.ft_away) : "\u2014"}
               current={liveCurrentScore}
+              minute={match.minute}
               needs={liveFtNeeds}
-              statusHeading={liveStatusHeading}
-              statusText={liveStatusText}
             />
           )}
 
@@ -1179,11 +1086,9 @@ export function PredictionCard({
         </div>
       )}
 
-      {/* ── FINISHED: compact post-match summary ── */}
+      {/* ── FINISHED: token strip + shared points ledger ── */}
       {isFinished && hasPrediction && (
-        <div className="border-t border-slate-100 bg-slate-50/40 px-4 py-4 sm:px-5">
-
-          {/* Row 1: "YOUR PREDICTION" label (left) + pts pill (right) */}
+        <div className="border-t border-slate-100 bg-slate-50/40 px-4 py-3.5 sm:px-5">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
               Your prediction
@@ -1199,93 +1104,59 @@ export function PredictionCard({
             )}
           </div>
 
-          {/* Row 2: bonus tags (outcome + any earned bonuses), each with its point value */}
-          {points && (outEarned || clsEarned || etOutEarned || etClsEarned || penWinEarned || penClsEarned) && (
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {outEarned && (
-                <BonusTag
-                  label={outcomeChipLabel(outcomeLabel(prediction.ft_home, prediction.ft_away), homeDisplayName, awayDisplayName)}
-                  pts={points.outcome_pts}
-                />
-              )}
-              {clsEarned && <BonusTag label="Closest score" pts={points.closest_pts} />}
-              {etOutEarned && <BonusTag label="ET outcome" pts={points.et_outcome_pts} />}
-              {etClsEarned && <BonusTag label="ET Closest" pts={points.et_closest_pts} />}
-              {penWinEarned && <BonusTag label="Pen winner" pts={points.pen_winner_pts} />}
-              {penClsEarned && <BonusTag label="Pen Closest" pts={points.pen_closest_pts} />}
+          <div className="flex flex-wrap gap-1.5">
+            {finishedPicks.map((pick) => (
+              <ScoreToken key={pick.label} {...pick} />
+            ))}
+          </div>
+
+          {points && finishedActualResult && (
+            <div className="mt-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <PointsLedger
+                row={{ ...prediction, ...points }}
+                match={match}
+                actualResult={finishedActualResult}
+                compact
+              />
             </div>
           )}
 
-          {/* Phase rows — only phases that actually happened, full-width pill style */}
-          <div className="space-y-2">
-            <FinishedPhaseRow
-              label="Half time"
-              pick={prediction.ht_home != null ? `${prediction.ht_home}–${prediction.ht_away}` : '—'}
-              earned={htEarned}
-              hasPoints={points?.ht_pts != null}
-              pts={points?.ht_pts}
-            />
-            <FinishedPhaseRow
-              label="Full time"
-              pick={`${prediction.ft_home}–${prediction.ft_away}`}
-              earned={ftEarned}
-              hasPoints={points?.ft_pts != null}
-              pts={points?.ft_pts}
-            />
-            {matchWentToEt && prediction.et_ht_home != null && (
-              <FinishedPhaseRow
-                label="ET half time"
-                pick={`${prediction.et_ht_home}–${prediction.et_ht_away}`}
-                earned={etHtEarned}
-                hasPoints={points?.et_ht_pts != null}
-                pts={points?.et_ht_pts}
-              />
-            )}
-            {matchWentToEt && prediction.et_ft_home != null && (
-              <FinishedPhaseRow
-                label="ET full time"
-                pick={`${prediction.et_ft_home}–${prediction.et_ft_away}`}
-                earned={etEarned}
-                hasPoints={points?.et_ft_pts != null}
-                pts={points?.et_ft_pts}
-              />
-            )}
-            {matchWentToPens && prediction.pen_home != null && (
-              <FinishedPhaseRow
-                label="Penalties"
-                pick={`${prediction.pen_home}–${prediction.pen_away}`}
-                earned={penEarned}
-                hasPoints={points?.pen_exact_pts != null}
-                pts={points?.pen_exact_pts}
-              />
-            )}
-          </div>
-
-          {/* Not-reached block: phases predicted that never happened — no ✓/✗, just greyed chips */}
           {(notApplicableEt || notApplicablePens) && (
-            <FinishedUnusedPicksDisclosure
-              expanded={finishedUnusedPicksOpen}
-              onToggle={() => setFinishedUnusedPicksOpen((open) => !open)}
-              title={notApplicableEt ? "Extra time & penalties not needed" : "Penalties not needed"}
-              subtitle={notApplicableEt ? "Decided in 90'" : "Decided in extra time"}
-              prediction={prediction}
-              showEt={notApplicableEt}
-              showPens={notApplicableEt || notApplicablePens}
-            />
+            <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200/70 pt-2 text-[11px] font-medium text-slate-400">
+              <span>
+                {notApplicableEt
+                  ? "ET & pens picks not needed — decided in 90'"
+                  : 'Pens pick not needed — decided in extra time'}
+              </span>
+              {notApplicableEt && prediction.et_ht_home != null && (
+                <span className="font-mono tabular-nums text-slate-300">ET HT {scorePair(prediction.et_ht_home, prediction.et_ht_away)}</span>
+              )}
+              {notApplicableEt && prediction.et_ft_home != null && (
+                <span className="font-mono tabular-nums text-slate-300">ET FT {scorePair(prediction.et_ft_home, prediction.et_ft_away)}</span>
+              )}
+              {prediction.pen_home != null && (
+                <span className="font-mono tabular-nums text-slate-300">Pens {scorePair(prediction.pen_home, prediction.pen_away)}</span>
+              )}
+            </p>
           )}
         </div>
       )}
 
-      {/* ── View all predictions ── */}
-      {onViewPredictions && (
-        <button
-          type="button"
-          onClick={() => onViewPredictions(match)}
-          className="flex min-h-[36px] w-full items-center justify-center gap-1.5 border-t border-slate-100 text-[11px] font-semibold text-blue-500 transition hover:bg-slate-50 hover:text-blue-700"
-        >
-          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-          View all predictions
-        </button>
+      {/* ── Footer: stats / lineups + all predictions in one split row ── */}
+      {(matchDetailsButton || onViewPredictions) && (
+        <div className="flex divide-x divide-slate-100 border-t border-slate-100">
+          {matchDetailsButton}
+          {onViewPredictions && (
+            <button
+              type="button"
+              onClick={() => onViewPredictions(match)}
+              className="flex min-h-[36px] flex-1 items-center justify-center gap-1.5 text-[11px] font-semibold text-blue-500 transition hover:bg-slate-50 hover:text-blue-700"
+            >
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+              View all predictions
+            </button>
+          )}
+        </div>
       )}
     </article>
   );

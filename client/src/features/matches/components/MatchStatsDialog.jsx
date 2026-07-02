@@ -70,7 +70,7 @@ export function MatchStatsDialog({ match, stats, loading, error, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 backdrop-blur-sm sm:flex-row sm:items-start sm:justify-center sm:px-3 sm:py-8"
+      className="fixed inset-0 z-[1100] flex flex-col bg-slate-950/80 backdrop-blur-sm sm:flex-row sm:items-start sm:justify-center sm:px-3 sm:py-8"
       onClick={onClose}
     >
       <div

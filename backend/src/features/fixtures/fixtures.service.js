@@ -5,17 +5,23 @@ const logger = require('../../shared/logging/logger');
 const { getCalendarResults } = require('./fixtures.cache');
 const { mapMatch } = require('./fifaFixtures.mapper');
 const { FINISHED_AFTER_MS } = require('../../config/constants');
-const { getEtMatchIds } = require('../scoring/scoring.repository');
+const { getAllResults } = require('../scoring/scoring.repository');
 const { FIFA_PERIODS } = require('../../config/fifaPeriods');
 
 // Statuses that mean the match is definitively over — no live enrichment needed.
 const TERMINAL_STATUSES = new Set([2, 4, 5, 6, 7, 8]);
 
 async function getAllFixtures() {
-  const [raw, etMatchIds] = await Promise.all([
+  const [raw, storedResults] = await Promise.all([
     getCalendarResults(),
-    getEtMatchIds().catch(() => new Set()),
+    getAllResults().catch(() => []),
   ]);
+  // Stored phase-by-phase results (HT / 90' / ET / pens) keyed by match id. Attached
+  // to each fixture so the client can explain scoring without extra requests.
+  const resultsById = new Map(storedResults.map((r) => [String(r.match_id), r]));
+  const etMatchIds = new Set(
+    storedResults.filter((r) => r.et_ft_home != null).map((r) => String(r.match_id)),
+  );
   const now = Date.now();
 
   const enriched = await Promise.all(
@@ -47,7 +53,20 @@ async function getAllFixtures() {
     })
   );
 
-  return enriched.map(({ match, live }) => mapMatch(match, live, etMatchIds));
+  return enriched.map(({ match, live }) => {
+    const mapped = mapMatch(match, live, etMatchIds);
+    const stored = resultsById.get(String(mapped.id));
+    mapped.result = stored
+      ? {
+          ht_home: stored.ht_home, ht_away: stored.ht_away,
+          ft_home: stored.ft_home, ft_away: stored.ft_away,
+          et_ht_home: stored.et_ht_home, et_ht_away: stored.et_ht_away,
+          et_ft_home: stored.et_ft_home, et_ft_away: stored.et_ft_away,
+          pen_home: stored.pen_home, pen_away: stored.pen_away,
+        }
+      : null;
+    return mapped;
+  });
 }
 
 module.exports = { getAllFixtures };

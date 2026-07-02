@@ -22,7 +22,7 @@ export function TeamResultsSheet({ team, row, groupName, matches, onClose }) {
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[1090] bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       />
@@ -31,7 +31,7 @@ export function TeamResultsSheet({ team, row, groupName, matches, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label={team ? `${team.name} results` : 'Team results'}
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-0 z-[1100] flex h-full w-full max-w-md flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

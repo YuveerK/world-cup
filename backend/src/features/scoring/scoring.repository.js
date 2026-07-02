@@ -39,13 +39,12 @@ async function findResultsIn(matchIds) {
   return data || [];
 }
 
-async function getEtMatchIds() {
+async function getAllResults() {
   const { data, error } = await supabase
     .from('match_results')
-    .select('match_id')
-    .not('et_ft_home', 'is', null);
+    .select('match_id, ht_home, ht_away, ft_home, ft_away, et_ht_home, et_ht_away, et_ft_home, et_ft_away, pen_home, pen_away');
   if (error) throw error;
-  return new Set((data || []).map((r) => String(r.match_id)));
+  return data || [];
 }
 
 async function deleteResult(matchId) {
@@ -88,7 +87,7 @@ module.exports = {
   findResult,
   findResultsIn,
   deleteResult,
-  getEtMatchIds,
+  getAllResults,
   getPredictionsForMatch,
   getExistingPointsForMatch,
   upsertPoints,

@@ -309,13 +309,13 @@ export function MatchdayReportPage() {
           <div
             aria-hidden="true"
             onClick={() => setSelectedUsername(null)}
-            className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${spotlightRow ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            className={`fixed inset-0 z-[1090] bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${spotlightRow ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label={spotlightRow ? `Player analysis: ${spotlightRow.username}` : 'Player analysis'}
-            className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${spotlightRow ? 'translate-x-0' : 'translate-x-full'}`}
+            className={`fixed right-0 top-0 z-[1100] flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${spotlightRow ? 'translate-x-0' : 'translate-x-full'}`}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5">
               <div className="flex items-center gap-2.5">
@@ -363,13 +363,13 @@ export function MatchdayReportPage() {
           <div
             aria-hidden="true"
             onClick={closePredSheet}
-            className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${predMatch ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            className={`fixed inset-0 z-[1090] bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${predMatch ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label={predMatch ? `Predictions: ${matchTitle(predMatch)}` : 'Match predictions'}
-            className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${predMatch ? 'translate-x-0' : 'translate-x-full'}`}
+            className={`fixed right-0 top-0 z-[1100] flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl transition-transform duration-300 ease-out ${predMatch ? 'translate-x-0' : 'translate-x-full'}`}
           >
             <div className="flex shrink-0 min-w-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5">
               <div className="flex min-w-0 items-center gap-2.5">
